@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>But first,</title>
+<style>
+  :root{
+    --bg:#0f1720;
+    --card:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+    --muted:#9aa6b2;
+    --accentStart:#6b3bff;
+    --accentEnd:#7c5cff;
+    --bar-height:72px;
+    --max-video-w:420px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter, "Segoe UI", system-ui, -apple-system, Roboto, Arial;background:var(--bg);color:#e6eef8}
+  body{
+    background: linear-gradient(180deg,var(--bg) 0%, #07101a 100%);
+    padding:18px;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    min-height:100vh;
+  }
+  .container{
+    width:100%;
+    max-width:1150px;
+    background:var(--card);
+    border-radius:18px;
+    padding:18px;
+    box-shadow: 0 10px 40px rgba(2,6,23,0.6);
+    display:grid;
+    gap:18px;
+    grid-template-columns: 1fr;
+  }
+  @media(min-width:920px){
+    .container{ grid-template-columns: minmax(320px, var(--max-video-w)) 1fr; align-items:start; gap:22px; }
+  }
+  .card{border-radius:12px;padding:12px;background:transparent;display:flex;flex-direction:column;gap:10px;align-items:center}
+  .top-row{width:100%;display:flex;gap:8px;align-items:center;justify-content:space-between}
+  h1{margin:0;font-size:1.15rem}
+  .muted{color:var(--muted);font-size:0.92rem}
+  video#player{
+    width:100%;
+    max-width:var(--max-video-w);
+    aspect-ratio:9/16;
+    border-radius:12px;
+    background:#000;
+    box-shadow:0 8px 30px rgba(0,0,0,0.6);
+    object-fit:contain;
+    display:block;
+    flex-shrink:0;
+  }
+  button{
+    background: linear-gradient(90deg,var(--accentStart), var(--accentEnd));
+    border:none;color:white;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer;
+  }
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .stats{display:flex;flex-direction:column;gap:12px;padding:6px 4px}
+  .stat-card{padding:12px;border-radius:12px;background:transparent}
+  .bar{width:100%;height:var(--bar-height);border-radius:12px;background:rgba(255,255,255,0.03);overflow:hidden;position:relative}
+  .bar-filled{height:100%;width:0%;transition:width 700ms cubic-bezier(.2,.9,.2,1);background:linear-gradient(90deg,var(--accentStart),var(--accentEnd))}
+  .bar-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:900;pointer-events:none;font-size:1.35rem;text-shadow:0 1px 8px rgba(0,0,0,0.45)}
+  .bar-top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .bar-top-row .left{color:var(--muted);font-weight:700}
+  .bar-top-row .right{color:var(--muted);font-weight:700}
+
+  /* leaderboard card styles */
+  #leaderboardList{display:flex;flex-direction:column;gap:10px;margin:0;padding:0}
+  .lb-card{
+    background: rgba(255,255,255,0.03);
+    border-radius:10px;
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    min-height:56px;
+    color: #ffffff; /* default text color = white */
+  }
+  .lb-card.gold, .lb-card.silver, .lb-card.bronze { color: #071427; }
+  .lb-card.rainbow { color: #ffffff; }
+
+  .lb-left{display:flex;flex-direction:column;align-items:flex-start;flex:1}
+  .lb-rank{font-size:0.78rem;font-weight:600;color:inherit}
+  .lb-name{font-size:1.25rem;font-weight:800;line-height:1;color:inherit;text-align:left}
+  .lb-right{text-align:right;min-width:160px}
+  .lb-accuracy{font-size:1.05rem;font-weight:700;color:inherit}
+  .lb-matches{font-size:0.88rem;margin-top:6px;color:inherit}
+
+  .gold{background: linear-gradient(90deg,#FFD54A,#FFC107); }
+  .silver{background: linear-gradient(90deg,#E0E0E0,#BDBDBD); }
+  .bronze{background: linear-gradient(90deg,#D7A17A,#C68654); }
+  .rainbow{
+    background: linear-gradient(90deg, #ff3cac, #784ba0, #2b86c5, #00d4ff, #a8ff78, #ffd76f);
+    background-size: 300% 300%;
+    animation: rainbow 4s linear infinite;
+  }
+  @keyframes rainbow{
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+  }
+
+  /* loading / error states */
+  .lb-placeholder{padding:14px;border-radius:8px;background:rgba(255,255,255,0.02);color:var(--muted);text-align:center}
+  .lb-error{padding:10px;border-radius:8px;background:rgba(255,0,0,0.04);color:#ffb3b3;text-align:center}
+
+  @media(max-width:420px){
+    :root{--bar-height:56px}
+    .bar-label{font-size:1.05rem}
+    .lb-name{font-size:1rem}
+    .lb-right{min-width:92px}
+  }
+
+  canvas#confetti{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:60}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" style="align-items:stretch">
+      <div class="top-row" style="width:100%;max-width:var(--max-video-w);">
+        <h1>But first,</h1>
+        <div style="display:flex;gap:8px">
+          <button id="reshuffleBtn">Reshuffle & Play</button>
+        </div>
+      </div>
+
+      <video id="player" controls playsinline webkit-playsinline></video>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="bar-top-row">
+          <div class="left">Progress</div>
+          <div class="right" id="progressPercentText">0%</div>
+        </div>
+        <div class="bar" id="progressBar">
+          <div id="progressFilled" class="bar-filled"></div>
+          <div class="bar-label" id="progressLabel">0%</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="bar-top-row">
+          <div class="left">Accuracy</div>
+          <div class="right" id="exactMatchesText">Exact Matches: 0 / 41</div>
+        </div>
+        <div class="bar" id="resultBar">
+          <div id="resultFilled" class="bar-filled"></div>
+          <div class="bar-label" id="resultLabel">--.--% accuracy</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="bar-top-row">
+          <div class="left">Leaderboard</div>
+        </div>
+        <!-- placeholder shown while loading, replaced by cards or error -->
+        <div id="leaderboardList">
+          <div id="lb-placeholder" class="lb-placeholder">Loading leaderboard…</div>
+        </div>
+        <div style="margin-top:8px;display:flex;justify-content:flex-end">
+          <button id="retryBtn" class="ghost" style="display:none">Retry leaderboard</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="confetti"></canvas>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+  // your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBIe-458HUFo2yv4ExSdrp9ydrg4yVHLZI",
+    authDomain: "chones-fba45.firebaseapp.com",
+    projectId: "chones-fba45",
+    storageBucket: "chones-fba45.firebasestorage.app",
+    messagingSenderId: "248867735301",
+    appId: "1:248867735301:web:d331bf15c39a9a2c6f196c"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  /* ---------- Firestore helpers ---------- */
+  async function saveScore(name, accuracyFraction, exactMatches) {
+    const accuracyNum = Number((accuracyFraction * 100).toFixed(2));
+    await addDoc(collection(db, "scores"), {
+      name,
+      accuracy: accuracyNum,
+      exactMatches,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // tie-break: accuracy desc, exactMatches desc, timestamp asc
+  async function loadLeaderboard() {
+    const list = document.getElementById('leaderboardList');
+    const placeholder = document.getElementById('lb-placeholder');
+    const retryBtn = document.getElementById('retryBtn');
+    placeholder && (placeholder.textContent = 'Loading leaderboard…');
+    retryBtn.style.display = 'none';
+    try {
+      // query with tie-break orders
+      const q = query(
+        collection(db, "scores"),
+        orderBy("accuracy", "desc"),
+        orderBy("exactMatches", "desc"),
+        orderBy("timestamp", "asc"),
+        limit(10)
+      );
+      console.log('[Leaderboard] running query...');
+      const querySnapshot = await getDocs(q);
+      const scores = [];
+      querySnapshot.forEach((doc) => {
+        scores.push(doc.data());
+      });
+      renderLeaderboard(scores);
+      console.log('[Leaderboard] loaded', scores.length, 'entries');
+    } catch (err) {
+      console.error('Failed to load leaderboard:', err);
+      // show friendly error in UI
+      list.innerHTML = `<div class="lb-error">Leaderboard unavailable — ${String(err.message || err)}<br><small>See console for details.</small></div>`;
+      retryBtn.style.display = 'inline-block';
+    }
+  }
+
+  function ordinal(n){
+    const s=["th","st","nd","rd"];
+    const v = n%100;
+    return n + (s[(v-20)%10]||s[v]||s[0]);
+  }
+
+  function renderLeaderboard(scores){
+    const container = document.getElementById("leaderboardList");
+    container.innerHTML = "";
+    if(!scores || scores.length === 0){
+      container.innerHTML = '<div class="lb-placeholder">No scores yet — be the first to save one!</div>';
+      return;
+    }
+    scores.forEach((s, idx) => {
+      const rank = idx + 1;
+      const card = document.createElement("div");
+      card.className = "lb-card";
+
+      const accuracyVal = Number(s.accuracy);
+      if(!isNaN(accuracyVal) && Math.abs(accuracyVal - 100) < 1e-6){
+        card.classList.add("rainbow");
+      } else if(rank === 1){
+        card.classList.add("gold");
+      } else if(rank === 2){
+        card.classList.add("silver");
+      } else if(rank === 3){
+        card.classList.add("bronze");
+      }
+
+      const left = document.createElement("div");
+      left.className = "lb-left";
+      const rankEl = document.createElement("div");
+      rankEl.className = "lb-rank";
+      rankEl.textContent = ordinal(rank) + " Place";
+      const nameEl = document.createElement("div");
+      nameEl.className = "lb-name";
+      nameEl.textContent = s.name || "Anonymous";
+      left.appendChild(rankEl);
+      left.appendChild(nameEl);
+
+      const right = document.createElement("div");
+      right.className = "lb-right";
+      const accEl = document.createElement("div");
+      accEl.className = "lb-accuracy";
+      accEl.textContent = ( (typeof s.accuracy === "number") ? s.accuracy.toFixed(2) : Number(s.accuracy).toFixed(2) ) + "% accuracy";
+      const matEl = document.createElement("div");
+      matEl.className = "lb-matches";
+      matEl.textContent = `${s.exactMatches} / ${totalVideos} Exact Matches`;
+      right.appendChild(accEl);
+      right.appendChild(matEl);
+
+      card.appendChild(left);
+      card.appendChild(right);
+      container.appendChild(card);
+    });
+  }
+
+  /* ---------- Video shuffle & accuracy logic (unchanged) ---------- */
+  const totalVideos = 41;
+  const videos = Array.from({length: totalVideos}, (_,i) => `chones_${i+1}.mp4`);
+  const player = document.getElementById('player');
+  const reshuffleBtn = document.getElementById('reshuffleBtn');
+  const progressFilled = document.getElementById('progressFilled');
+  const progressLabel  = document.getElementById('progressLabel');
+  const progressPercentText = document.getElementById('progressPercentText');
+  const resultFilled = document.getElementById('resultFilled');
+  const resultLabel = document.getElementById('resultLabel');
+  const exactMatchesText = document.getElementById('exactMatchesText');
+
+  let shuffled = [], currentIndex = 0, finished = false;
+  function shuffleArray(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+  function setProgress(percent){ progressFilled.style.width = percent + '%'; progressLabel.textContent = Math.round(percent) + '%'; progressPercentText.textContent = Math.round(percent) + '%'; }
+
+  function computeAccuracyOnPlayed(m){
+    if(m<=0) return { proximityAvg:null, exactMatches:0 };
+    const played = shuffled.slice(0, m);
+    const origIndices = played.map(n=>parseInt(n.replace(/[^0-9]/g,''),10)-1);
+    const sorted = origIndices.slice().map((v,i)=>({v,i})).sort((a,b)=>a.v-b.v);
+    const origToRank = new Map(); sorted.forEach((o,rank)=>origToRank.set(o.v,rank));
+    let proxSum=0, exact=0;
+    for(let i=0;i<m;i++){
+      const orig = origIndices[i];
+      const rank = origToRank.get(orig);
+      if(orig === i) exact++;
+      let prox = (m===1)?1:1 - (Math.abs(i - rank) / (m - 1));
+      if(prox < 0) prox = 0;
+      proxSum += prox;
+    }
+    return { proximityAvg: proxSum / m, exactMatches: exact };
+  }
+
+  function showAccuracy(prox){
+    const pct = prox * 100;
+    resultFilled.style.width = pct.toFixed(4) + '%';
+    resultLabel.textContent = pct.toFixed(2) + '% accuracy';
+  }
+
+  player.addEventListener('timeupdate', ()=>{
+    if(finished) return;
+    if(player.duration && isFinite(player.duration) && player.duration > 0){
+      const frac = Math.max(0, Math.min(1, player.currentTime / player.duration));
+      const played = currentIndex + frac;
+      const percent = (played / totalVideos) * 100;
+      setProgress(percent);
+    }
+  });
+
+  player.addEventListener('ended', async ()=>{
+    currentIndex++;
+    setProgress((currentIndex / totalVideos) * 100);
+
+    const { proximityAvg, exactMatches } = computeAccuracyOnPlayed(currentIndex);
+    if(proximityAvg != null){
+      showAccuracy(proximityAvg);
+      exactMatchesText.textContent = `Exact Matches: ${exactMatches} / ${totalVideos}`;
+    } else {
+      resultLabel.textContent = '--.--% accuracy';
+      exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+    }
+
+    if(currentIndex < totalVideos){
+      player.src = shuffled[currentIndex];
+      player.play().catch(()=>{/* autoplay may be blocked */});
+    } else {
+      finished = true;
+      const final = computeAccuracyOnPlayed(totalVideos);
+      showAccuracy(final.proximityAvg);
+      exactMatchesText.textContent = `Exact Matches: ${final.exactMatches} / ${totalVideos}`;
+      if(Math.abs(final.proximityAvg - 1) < 1e-9) launchConfetti();
+      await window.onPlaylistFinished(final.proximityAvg, final.exactMatches);
+    }
+  });
+
+  reshuffleBtn.addEventListener('click', ()=>{
+    shuffled = shuffleArray(videos);
+    currentIndex = 0;
+    finished = false;
+    player.src = shuffled[0];
+    player.play().catch(()=>{/* autoplay blocked */});
+    setProgress(0);
+    resultLabel.textContent = '--.--% accuracy';
+    exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+  });
+
+  function launchConfetti(){
+    const canvas = document.getElementById('confetti');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const pieces = [];
+    for(let i=0;i<220;i++){
+      pieces.push({
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height - canvas.height,
+        w: 6 + Math.random()*12,
+        h: 10 + Math.random()*16,
+        color: ['#ff3cac','#ffb347','#ffd54a','#7c5cff','#00d4ff','#66ff66'][Math.floor(Math.random()*6)],
+        rot: Math.random()*360, speed: 1 + Math.random()*6
+      });
+    }
+    let ticks = 0;
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for(const p of pieces){
+        ctx.save();
+        ctx.translate(p.x,p.y);
+        ctx.rotate(p.rot * Math.PI/180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        ctx.restore();
+        p.y += p.speed;
+        p.rot += (p.speed/2);
+        if(p.y > canvas.height + 20){ p.y = -20; p.x = Math.random()*canvas.width; }
+      }
+      ticks++;
+      if(ticks < 600) requestAnimationFrame(draw);
+    }
+    draw();
+  }
+
+  /* ---------- Leaderboard save prompt & flow ---------- */
+  window.onPlaylistFinished = async function(finalAccuracy, exactMatches){
+    const percentDisplay = (finalAccuracy * 100).toFixed(2);
+    const save = confirm(`Your run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\n\nDo you want to save this score to the leaderboard?`);
+    if(save){
+      const name = prompt("Enter your name for the leaderboard:", "Player");
+      if(name){
+        await saveScore(name, finalAccuracy, exactMatches);
+        alert("Score saved!");
+      }
+    }
+    await loadLeaderboard();
+  };
+
+  /* ---------- retry button hook + error logging ---------- */
+  document.getElementById('retryBtn').addEventListener('click', ()=> loadLeaderboard());
+  window.addEventListener('error', (e)=>{
+    console.error('Unhandled error:', e.error || e.message || e);
+    const container = document.getElementById('leaderboardList');
+    container.innerHTML = `<div class="lb-error">An error occurred — check console for details.</div>`;
+  });
+
+  /* ---------- Init ---------- */
+  shuffled = shuffleArray(videos);
+  currentIndex = 0;
+  player.src = shuffled[0];
+  setProgress(0);
+  resultLabel.textContent = '--.--% accuracy';
+  exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+
+  // attempt to load leaderboard now
+  loadLeaderboard().catch(err => {
+    console.error('loadLeaderboard initial error:', err);
+    const list = document.getElementById('leaderboardList');
+    list.innerHTML = `<div class="lb-error">Leaderboard load failed. Check console and retry.</div>`;
+    document.getElementById('retryBtn').style.display = 'inline-block';
+  });
+
+  window.addEventListener('resize', ()=>{ /* no-op */ });
+</script>
+</body>
+</html>
