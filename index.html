@@ -175,7 +175,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
   import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-  // your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyBIe-458HUFo2yv4ExSdrp9ydrg4yVHLZI",
     authDomain: "chones-fba45.firebaseapp.com",
@@ -199,7 +198,6 @@
     });
   }
 
-  // tie-break: accuracy desc, exactMatches desc, timestamp asc
   async function loadLeaderboard() {
     const list = document.getElementById('leaderboardList');
     const placeholder = document.getElementById('lb-placeholder');
@@ -207,7 +205,6 @@
     placeholder && (placeholder.textContent = 'Loading leaderboard…');
     retryBtn.style.display = 'none';
     try {
-      // query with tie-break orders
       const q = query(
         collection(db, "scores"),
         orderBy("accuracy", "desc"),
@@ -215,17 +212,14 @@
         orderBy("timestamp", "asc"),
         limit(10)
       );
-      console.log('[Leaderboard] running query...');
       const querySnapshot = await getDocs(q);
       const scores = [];
       querySnapshot.forEach((doc) => {
         scores.push(doc.data());
       });
       renderLeaderboard(scores);
-      console.log('[Leaderboard] loaded', scores.length, 'entries');
     } catch (err) {
       console.error('Failed to load leaderboard:', err);
-      // show friendly error in UI
       list.innerHTML = `<div class="lb-error">Leaderboard unavailable — ${String(err.message || err)}<br><small>See console for details.</small></div>`;
       retryBtn.style.display = 'inline-block';
     }
@@ -288,7 +282,7 @@
     });
   }
 
-  /* ---------- Video shuffle & accuracy logic (unchanged) ---------- */
+  /* ---------- Video shuffle & accuracy logic ---------- */
   const totalVideos = 41;
   const videos = Array.from({length: totalVideos}, (_,i) => `chones_${i+1}.mp4`);
   const player = document.getElementById('player');
@@ -304,20 +298,40 @@
   function shuffleArray(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
   function setProgress(percent){ progressFilled.style.width = percent + '%'; progressLabel.textContent = Math.round(percent) + '%'; progressPercentText.textContent = Math.round(percent) + '%'; }
 
+  // robust parser: extracts "chones_XX.mp4" no matter the path/query
+  function extractIndexFromName(name) {
+    const base = name.split('/').pop().split('?')[0];
+    const m = base.match(/^chones_(\d+)\.mp4$/);
+    if (!m) return null;
+    return parseInt(m[1], 10) - 1; // 0-based
+  }
+
   function computeAccuracyOnPlayed(m){
-    if(m<=0) return { proximityAvg:null, exactMatches:0 };
-    const played = shuffled.slice(0, m);
-    const origIndices = played.map(n=>parseInt(n.replace(/[^0-9]/g,''),10)-1);
-    const sorted = origIndices.slice().map((v,i)=>({v,i})).sort((a,b)=>a.v-b.v);
-    const origToRank = new Map(); sorted.forEach((o,rank)=>origToRank.set(o.v,rank));
-    let proxSum=0, exact=0;
+    if(m <= 0) return { proximityAvg: null, exactMatches: 0 };
+
+    const playedOrigIndices = shuffled
+      .slice(0, m)
+      .map(s => extractIndexFromName(s));
+
+    const sorted = playedOrigIndices
+      .map((orig,i)=>({orig,i}))
+      .filter(o=>o.orig !== null)
+      .sort((a,b)=>a.orig - b.orig);
+
+    const origToRank = new Map();
+    sorted.forEach((o, rank) => origToRank.set(o.orig, rank));
+
+    let proxSum = 0, exact = 0;
     for(let i=0;i<m;i++){
-      const orig = origIndices[i];
-      const rank = origToRank.get(orig);
+      const orig = playedOrigIndices[i];
+      if(orig === null) continue;
+
+      // ✅ exact if original index equals shuffled index
       if(orig === i) exact++;
-      let prox = (m===1)?1:1 - (Math.abs(i - rank) / (m - 1));
-      if(prox < 0) prox = 0;
-      proxSum += prox;
+
+      const rank = origToRank.get(orig);
+      let prox = (m===1 || rank===undefined) ? 1 : 1 - (Math.abs(i - rank) / (m - 1));
+      proxSum += Math.max(0, prox);
     }
     return { proximityAvg: proxSum / m, exactMatches: exact };
   }
@@ -410,7 +424,7 @@
     draw();
   }
 
-  /* ---------- Leaderboard save prompt & flow ---------- */
+  /* ---------- Leaderboard save flow ---------- */
   window.onPlaylistFinished = async function(finalAccuracy, exactMatches){
     const percentDisplay = (finalAccuracy * 100).toFixed(2);
     const save = confirm(`Your run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\n\nDo you want to save this score to the leaderboard?`);
@@ -424,7 +438,6 @@
     await loadLeaderboard();
   };
 
-  /* ---------- retry button hook + error logging ---------- */
   document.getElementById('retryBtn').addEventListener('click', ()=> loadLeaderboard());
   window.addEventListener('error', (e)=>{
     console.error('Unhandled error:', e.error || e.message || e);
@@ -440,15 +453,12 @@
   resultLabel.textContent = '--.--% accuracy';
   exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
 
-  // attempt to load leaderboard now
   loadLeaderboard().catch(err => {
     console.error('loadLeaderboard initial error:', err);
     const list = document.getElementById('leaderboardList');
     list.innerHTML = `<div class="lb-error">Leaderboard load failed. Check console and retry.</div>`;
     document.getElementById('retryBtn').style.display = 'inline-block';
   });
-
-  window.addEventListener('resize', ()=>{ /* no-op */ });
 </script>
 </body>
 </html>
