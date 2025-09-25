@@ -15,15 +15,29 @@
     --max-video-w:420px;
   }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;font-family:Inter, "Segoe UI", system-ui, -apple-system, Roboto, Arial;background:var(--bg);color:#e6eef8}
-  body{
-    background: linear-gradient(180deg,var(--bg) 0%, #07101a 100%);
+  html,body{
+    height:100%;
+    margin:0;
+    font-family:Inter, "Segoe UI", system-ui, -apple-system, Roboto, Arial;
+    color:#e6eef8;
+  }
+
+  /* Fixed background applied at the html level */
+  html {
+    background: linear-gradient(180deg,var(--bg) 0%, #07101a 100%) fixed;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  body {
+    background: transparent; /* transparent so html handles the background */
     padding:18px;
     display:flex;
     justify-content:center;
     align-items:flex-start;
     min-height:100vh;
   }
+
   .container{
     width:100%;
     max-width:1150px;
@@ -68,6 +82,34 @@
   .bar-top-row .right{color:var(--muted);font-weight:700}
 
   /* leaderboard card styles */
+  #leaderboardTabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+  }
+
+  /* Both tabs base (card-like) */
+  #leaderboardTabs button{
+    padding:10px 16px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+    color: var(--muted);
+    font-weight:600;
+    cursor:pointer;
+    flex:1;
+    text-align:center;
+  }
+
+  /* Selected tab (like Reshuffle button) */
+  #leaderboardTabs button.active{
+    background: linear-gradient(90deg,var(--accentStart), var(--accentEnd));
+    color:white;
+    font-weight:700;
+    border:none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+
   #leaderboardList{display:flex;flex-direction:column;gap:10px;margin:0;padding:0}
   .lb-card{
     background: rgba(255,255,255,0.03);
@@ -78,7 +120,7 @@
     justify-content:space-between;
     gap:12px;
     min-height:56px;
-    color: #ffffff; /* default text color = white */
+    color: #ffffff;
   }
   .lb-card.gold, .lb-card.silver, .lb-card.bronze { color: #071427; }
   .lb-card.rainbow { color: #ffffff; }
@@ -93,18 +135,14 @@
   .gold{background: linear-gradient(90deg,#FFD54A,#FFC107); }
   .silver{background: linear-gradient(90deg,#E0E0E0,#BDBDBD); }
   .bronze{background: linear-gradient(90deg,#D7A17A,#C68654); }
+
+  /* --- Rainbow style matched to the older file (animated multi-stop gradient) --- */
   .rainbow{
     background: linear-gradient(90deg, #ff3cac, #784ba0, #2b86c5, #00d4ff, #a8ff78, #ffd76f);
     background-size: 300% 300%;
     animation: rainbow 4s linear infinite;
   }
-  @keyframes rainbow{
-    0%{background-position:0% 50%}
-    50%{background-position:100% 50%}
-    100%{background-position:0% 50%}
-  }
 
-  /* loading / error states */
   .lb-placeholder{padding:14px;border-radius:8px;background:rgba(255,255,255,0.02);color:var(--muted);text-align:center}
   .lb-error{padding:10px;border-radius:8px;background:rgba(255,0,0,0.04);color:#ffb3b3;text-align:center}
 
@@ -116,6 +154,13 @@
   }
 
   canvas#confetti{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:60}
+
+  /* Rainbow animation */
+  @keyframes rainbow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
 </style>
 </head>
 <body>
@@ -158,7 +203,10 @@
         <div class="bar-top-row">
           <div class="left">Leaderboard</div>
         </div>
-        <!-- placeholder shown while loading, replaced by cards or error -->
+        <div id="leaderboardTabs">
+          <button id="tabMain" class="active">Main Leaderboard</button>
+          <button id="tabExact">Exact Matches</button>
+        </div>
         <div id="leaderboardList">
           <div id="lb-placeholder" class="lb-placeholder">Loading leaderboard…</div>
         </div>
@@ -172,337 +220,375 @@
   <canvas id="confetti"></canvas>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBIe-458HUFo2yv4ExSdrp9ydrg4yVHLZI",
-    authDomain: "chones-fba45.firebaseapp.com",
-    projectId: "chones-fba45",
-    storageBucket: "chones-fba45.firebasestorage.app",
-    messagingSenderId: "248867735301",
-    appId: "1:248867735301:web:d331bf15c39a9a2c6f196c"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyBIe-458HUFo2yv4ExSdrp9ydrg4yVHLZI",
+  authDomain: "chones-fba45.firebaseapp.com",
+  projectId: "chones-fba45",
+  storageBucket: "chones-fba45.firebasestorage.app",
+  messagingSenderId: "248867735301",
+  appId: "1:248867735301:web:d331bf15c39a9a2c6f196c"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  /* ---------- Firestore helpers ---------- */
-  async function saveScore(name, accuracyFraction, exactMatches) {
-    const accuracyNum = Number((accuracyFraction * 100).toFixed(2));
-    await addDoc(collection(db, "scores"), {
-      name,
-      accuracy: accuracyNum,
-      exactMatches,
-      timestamp: new Date().toISOString()
-    });
-  }
+let activeTab = "main"; // "main" or "exact"
+const totalVideos = 41;
 
-  async function loadLeaderboard() {
-    const list = document.getElementById('leaderboardList');
-    const placeholder = document.getElementById('lb-placeholder');
-    const retryBtn = document.getElementById('retryBtn');
-    placeholder && (placeholder.textContent = 'Loading leaderboard…');
-    retryBtn.style.display = 'none';
-    try {
-      const q = query(
+/* ---------- Firestore helpers ---------- */
+async function saveScore(name, accuracyFraction, exactMatches) {
+  // accuracyFraction expected in 0..1
+  const accuracyNum = Number((accuracyFraction * 100).toFixed(2));
+  await addDoc(collection(db, "scores"), {
+    name,
+    accuracy: accuracyNum,
+    exactMatches,
+    timestamp: new Date().toISOString()
+  });
+}
+
+async function loadLeaderboard(showAll=false) {
+  const list = document.getElementById('leaderboardList');
+  const placeholder = document.getElementById('lb-placeholder');
+  const retryBtn = document.getElementById('retryBtn');
+  placeholder && (placeholder.textContent = 'Loading leaderboard…');
+  retryBtn.style.display = 'none';
+  try {
+    let q;
+    const limitCount = showAll ? 1000 : 10;
+    if (activeTab === "main") {
+      q = query(
         collection(db, "scores"),
         orderBy("accuracy", "desc"),
         orderBy("exactMatches", "desc"),
         orderBy("timestamp", "asc"),
-        limit(10)
+        limit(limitCount)
       );
-      const querySnapshot = await getDocs(q);
-      const scores = [];
-      querySnapshot.forEach((doc) => {
-        scores.push(doc.data());
-      });
-      renderLeaderboard(scores);
-    } catch (err) {
-      console.error('Failed to load leaderboard:', err);
-      list.innerHTML = `<div class="lb-error">Leaderboard unavailable — ${String(err.message || err)}<br><small>See console for details.</small></div>`;
-      retryBtn.style.display = 'inline-block';
+    } else {
+      q = query(
+        collection(db, "scores"),
+        orderBy("exactMatches", "desc"),
+        orderBy("timestamp", "asc"),
+        limit(limitCount)
+      );
     }
+
+    const querySnapshot = await getDocs(q);
+    const scores = [];
+    querySnapshot.forEach((doc) => scores.push(doc.data()));
+    renderLeaderboard(scores, showAll);
+  } catch (err) {
+    console.error('Failed to load leaderboard:', err);
+    list.innerHTML = `<div class="lb-error">Leaderboard unavailable — ${String(err.message || err)}<br><small>See console for details.</small></div>`;
+    retryBtn.style.display = 'inline-block';
+  }
+}
+
+/* ---------- UI helpers ---------- */
+function ordinal(n){
+  const s=["th","st","nd","rd"];
+  const v = n%100;
+  return n + (s[(v-20)%10]||s[v]||s[0]);
+}
+
+function renderLeaderboard(scores, showAll=false){
+  const container = document.getElementById("leaderboardList");
+  container.innerHTML = "";
+  if(!scores || scores.length === 0){
+    container.innerHTML = '<div class="lb-placeholder">No scores yet — be the first to save one!</div>';
+    return;
   }
 
-  function ordinal(n){
-    const s=["th","st","nd","rd"];
-    const v = n%100;
-    return n + (s[(v-20)%10]||s[v]||s[0]);
-  }
+  scores.forEach((s, idx) => {
+    const rank = idx + 1;
+    const card = document.createElement("div");
+    card.className = "lb-card";
 
-  function renderLeaderboard(scores){
-    const container = document.getElementById("leaderboardList");
-    container.innerHTML = "";
-    if(!scores || scores.length === 0){
-      container.innerHTML = '<div class="lb-placeholder">No scores yet — be the first to save one!</div>';
-      return;
+    const accuracyVal = Number(s.accuracy);
+    const allExactMatches = Number(s.exactMatches) === totalVideos;
+    // rainbow only for perfect accuracy OR all exact matches (41/41)
+    if(!isNaN(accuracyVal) && (Math.abs(accuracyVal - 100) < 1e-6 || allExactMatches)){
+      card.classList.add("rainbow");
+    } else if(rank === 1){
+      card.classList.add("gold");
+    } else if(rank === 2){
+      card.classList.add("silver");
+    } else if(rank === 3){
+      card.classList.add("bronze");
     }
-    scores.forEach((s, idx) => {
-      const rank = idx + 1;
-      const card = document.createElement("div");
-      card.className = "lb-card";
 
-      const accuracyVal = Number(s.accuracy);
-      if(!isNaN(accuracyVal) && Math.abs(accuracyVal - 100) < 1e-6){
-        card.classList.add("rainbow");
-      } else if(rank === 1){
-        card.classList.add("gold");
-      } else if(rank === 2){
-        card.classList.add("silver");
-      } else if(rank === 3){
-        card.classList.add("bronze");
-      }
+    const left = document.createElement("div");
+    left.className = "lb-left";
+    const rankEl = document.createElement("div");
+    rankEl.className = "lb-rank";
+    rankEl.textContent = ordinal(rank) + " Place";
+    const nameEl = document.createElement("div");
+    nameEl.className = "lb-name";
+    nameEl.textContent = s.name || "Anonymous";
+    left.appendChild(rankEl);
+    left.appendChild(nameEl);
 
-      const left = document.createElement("div");
-      left.className = "lb-left";
-      const rankEl = document.createElement("div");
-      rankEl.className = "lb-rank";
-      rankEl.textContent = ordinal(rank) + " Place";
-      const nameEl = document.createElement("div");
-      nameEl.className = "lb-name";
-      nameEl.textContent = s.name || "Anonymous";
-      left.appendChild(rankEl);
-      left.appendChild(nameEl);
+    const right = document.createElement("div");
+    right.className = "lb-right";
 
-      const right = document.createElement("div");
-      right.className = "lb-right";
-      const accEl = document.createElement("div");
+    const accEl = document.createElement("div");
+    accEl.textContent = ( (typeof s.accuracy === "number") ? s.accuracy.toFixed(2) : Number(s.accuracy).toFixed(2) ) + "% accuracy";
+
+    const matEl = document.createElement("div");
+    matEl.textContent = `${s.exactMatches} / ${totalVideos} Exact Matches`;
+
+    // When the "exact" tab is active, we flip prominent fields.
+    if(activeTab === "exact"){
+      matEl.className = "lb-accuracy";
+      accEl.className = "lb-matches";
+      right.appendChild(matEl);
+      right.appendChild(accEl);
+    } else {
       accEl.className = "lb-accuracy";
-      accEl.textContent = ( (typeof s.accuracy === "number") ? s.accuracy.toFixed(2) : Number(s.accuracy).toFixed(2) ) + "% accuracy";
-      const matEl = document.createElement("div");
       matEl.className = "lb-matches";
-      matEl.textContent = `${s.exactMatches} / ${totalVideos} Exact Matches`;
       right.appendChild(accEl);
       right.appendChild(matEl);
+    }
 
-      card.appendChild(left);
-      card.appendChild(right);
-      container.appendChild(card);
+    card.appendChild(left);
+    card.appendChild(right);
+    container.appendChild(card);
+  });
+
+  // If we're not showing all and there are at least the default page size, allow expanding.
+  if(!showAll && scores.length >= 10){
+    const showAllBtn = document.createElement("button");
+    showAllBtn.textContent = "Show All";
+    showAllBtn.style.marginTop = "8px";
+    showAllBtn.style.alignSelf = "center";
+    showAllBtn.addEventListener("click", async () => loadLeaderboard(true));
+    container.appendChild(showAllBtn);
+  }
+}
+
+/* ---------- Leaderboard tabs ---------- */
+document.getElementById("tabMain").addEventListener("click", () => {
+  activeTab = "main";
+  document.getElementById("tabMain").classList.add("active");
+  document.getElementById("tabExact").classList.remove("active");
+  loadLeaderboard();
+});
+document.getElementById("tabExact").addEventListener("click", () => {
+  activeTab = "exact";
+  document.getElementById("tabExact").classList.add("active");
+  document.getElementById("tabMain").classList.remove("active");
+  loadLeaderboard();
+});
+
+/* ---------- Video shuffle & accuracy logic ---------- */
+const videos = Array.from({length: totalVideos}, (_,i) => `chones_${i+1}.mp4`);
+const player = document.getElementById('player');
+const reshuffleBtn = document.getElementById('reshuffleBtn');
+const progressFilled = document.getElementById('progressFilled');
+const progressLabel  = document.getElementById('progressLabel');
+const progressPercentText = document.getElementById('progressPercentText');
+const resultFilled = document.getElementById('resultFilled');
+const resultLabel = document.getElementById('resultLabel');
+const exactMatchesText = document.getElementById('exactMatchesText');
+
+let shuffled = [], currentIndex = 0, finished = false, testMode = false;
+
+function shuffleArray(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+function setProgress(percent){ progressFilled.style.width = percent + '%'; progressLabel.textContent = Math.round(percent) + '%'; progressPercentText.textContent = Math.round(percent) + '%'; }
+function extractIndexFromName(name) { const base = name.split('/').pop().split('?')[0]; const m = base.match(/^chones_(\d+)\.mp4$/); return m ? parseInt(m[1], 10) - 1 : null; }
+
+function computeAccuracyOnPlayed(m){
+  if(m <= 0) return { proximityAvg: null, exactMatches: 0 };
+  const playedOrigIndices = shuffled.slice(0, m).map(s => extractIndexFromName(s));
+  const sorted = playedOrigIndices.map((orig,i)=>({orig,i})).filter(o=>o.orig !== null).sort((a,b)=>a.orig - b.orig);
+  const origToRank = new Map(); sorted.forEach((o, rank) => origToRank.set(o.orig, rank));
+  let proxSum = 0, exact = 0;
+  for(let i=0;i<m;i++){
+    const orig = playedOrigIndices[i]; if(orig === null) continue;
+    if(orig === i) exact++;
+    const rank = origToRank.get(orig);
+    let prox = (m===1 || rank===undefined) ? 1 : 1 - (Math.abs(i - rank) / (m - 1));
+    proxSum += Math.max(0, prox);
+  }
+  return { proximityAvg: proxSum / m, exactMatches: exact };
+}
+
+function showAccuracy(prox){
+  const pct = prox * 100;
+  resultFilled.style.width = pct.toFixed(4) + '%';
+  resultLabel.textContent = pct.toFixed(2) + '% accuracy';
+}
+
+function resetGame(){
+  shuffled = shuffleArray(videos);
+  currentIndex = 0;
+  finished = false;
+  testMode = false;
+  player.src = shuffled[0]; // don't autoplay on reset call
+  setProgress(0);
+  resultFilled.style.width = '0%';
+  resultLabel.textContent = '--.--% accuracy';
+  exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+}
+
+player.addEventListener('timeupdate', ()=>{
+  if(finished) return;
+  if(player.duration && isFinite(player.duration) && player.duration > 0){
+    const frac = Math.max(0, Math.min(1, player.currentTime / player.duration));
+    const played = currentIndex + frac;
+    setProgress((played / totalVideos) * 100);
+  }
+});
+
+player.addEventListener('ended', async ()=>{
+  currentIndex++;
+  setProgress((currentIndex / totalVideos) * 100);
+  const { proximityAvg, exactMatches } = computeAccuracyOnPlayed(currentIndex);
+  if(proximityAvg != null){
+    showAccuracy(proximityAvg);
+    exactMatchesText.textContent = `Exact Matches: ${exactMatches} / ${totalVideos}`;
+  } else {
+    resultFilled.style.width = '0%';
+    resultLabel.textContent = '--.--% accuracy';
+    exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+  }
+
+  if(currentIndex < totalVideos){
+    player.src = shuffled[currentIndex];
+    player.play().catch(()=>{ /* autoplay may be blocked */ });
+  } else {
+    finished = true;
+    const final = computeAccuracyOnPlayed(totalVideos);
+    showAccuracy(final.proximityAvg);
+    exactMatchesText.textContent = `Exact Matches: ${final.exactMatches} / ${totalVideos}`;
+    if(Math.abs(final.proximityAvg - 1) < 1e-9) launchConfetti();
+    await window.onPlaylistFinished(final.proximityAvg, final.exactMatches);
+  }
+});
+
+reshuffleBtn.addEventListener('click', ()=>{
+  shuffled = shuffleArray(videos);
+  currentIndex = 0;
+  finished = false;
+  testMode = false;
+  player.src = shuffled[0];
+  player.play().catch(()=>{/* autoplay blocked */});
+  setProgress(0);
+  resultFilled.style.width = '0%';
+  resultLabel.textContent = '--.--% accuracy';
+  exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+});
+
+/* ---------- Confetti (copied from older version) ---------- */
+function launchConfetti(){
+  const canvas = document.getElementById('confetti');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const pieces = [];
+  for(let i=0;i<220;i++){
+    pieces.push({
+      x: Math.random()*canvas.width,
+      y: Math.random()*canvas.height - canvas.height,
+      w: 6 + Math.random()*12,
+      h: 10 + Math.random()*16,
+      color: ['#ff3cac','#ffb347','#ffd54a','#7c5cff','#00d4ff','#66ff66'][Math.floor(Math.random()*6)],
+      rot: Math.random()*360, speed: 1 + Math.random()*6
     });
   }
-
-  /* ---------- Video shuffle & accuracy logic ---------- */
-  const totalVideos = 41;
-  const videos = Array.from({length: totalVideos}, (_,i) => `chones_${i+1}.mp4`);
-  const player = document.getElementById('player');
-  const reshuffleBtn = document.getElementById('reshuffleBtn');
-  const progressFilled = document.getElementById('progressFilled');
-  const progressLabel  = document.getElementById('progressLabel');
-  const progressPercentText = document.getElementById('progressPercentText');
-  const resultFilled = document.getElementById('resultFilled');
-  const resultLabel = document.getElementById('resultLabel');
-  const exactMatchesText = document.getElementById('exactMatchesText');
-
-  let shuffled = [], currentIndex = 0, finished = false;
-  let testMode = false;
-
-  function shuffleArray(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
-  function setProgress(percent){ progressFilled.style.width = percent + '%'; progressLabel.textContent = Math.round(percent) + '%'; progressPercentText.textContent = Math.round(percent) + '%'; }
-
-  function extractIndexFromName(name) {
-    const base = name.split('/').pop().split('?')[0];
-    const m = base.match(/^chones_(\d+)\.mp4$/);
-    if (!m) return null;
-    return parseInt(m[1], 10) - 1;
+  let ticks = 0;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(const p of pieces){
+      ctx.save();
+      ctx.translate(p.x,p.y);
+      ctx.rotate(p.rot * Math.PI/180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+      p.y += p.speed;
+      p.rot += (p.speed/2);
+      if(p.y > canvas.height + 20){ p.y = -20; p.x = Math.random()*canvas.width; }
+    }
+    ticks++;
+    if(ticks < 600) requestAnimationFrame(draw);
   }
+  draw();
+}
 
-  function computeAccuracyOnPlayed(m){
-    if(m <= 0) return { proximityAvg: null, exactMatches: 0 };
+/* ---------- Save flow after playlist finishes (copied & restored from older version) ---------- */
+window.onPlaylistFinished = async function(finalAccuracy, exactMatches){
+  // finalAccuracy is a fraction 0..1
+  const percentDisplay = (finalAccuracy * 100).toFixed(2);
 
-    const playedOrigIndices = shuffled
-      .slice(0, m)
-      .map(s => extractIndexFromName(s));
-
-    const sorted = playedOrigIndices
-      .map((orig,i)=>({orig,i}))
-      .filter(o=>o.orig !== null)
-      .sort((a,b)=>a.orig - b.orig);
-
-    const origToRank = new Map();
-    sorted.forEach((o, rank) => origToRank.set(o.orig, rank));
-
-    let proxSum = 0, exact = 0;
-    for(let i=0;i<m;i++){
-      const orig = playedOrigIndices[i];
-      if(orig === null) continue;
-      if(orig === i) exact++;
-      const rank = origToRank.get(orig);
-      let prox = (m===1 || rank===undefined) ? 1 : 1 - (Math.abs(i - rank) / (m - 1));
-      proxSum += Math.max(0, prox);
-    }
-    return { proximityAvg: proxSum / m, exactMatches: exact };
-  }
-
-  function showAccuracy(prox){
-    const pct = prox * 100;
-    resultFilled.style.width = pct.toFixed(4) + '%';
-    resultLabel.textContent = pct.toFixed(2) + '% accuracy';
-  }
-
-  player.addEventListener('timeupdate', ()=>{
-    if(finished) return;
-    if(player.duration && isFinite(player.duration) && player.duration > 0){
-      const frac = Math.max(0, Math.min(1, player.currentTime / player.duration));
-      const played = currentIndex + frac;
-      const percent = (played / totalVideos) * 100;
-      setProgress(percent);
-    }
-  });
-
-  player.addEventListener('ended', async ()=>{
-    currentIndex++;
-    setProgress((currentIndex / totalVideos) * 100);
-
-    const { proximityAvg, exactMatches } = computeAccuracyOnPlayed(currentIndex);
-    if(proximityAvg != null){
-      showAccuracy(proximityAvg);
-      exactMatchesText.textContent = `Exact Matches: ${exactMatches} / ${totalVideos}`;
-    } else {
-      resultFilled.style.width = '0%';   // 🚨 clear bar
-      resultLabel.textContent = '--.--% accuracy';
-      exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
-    }
-
-    if(currentIndex < totalVideos){
-      player.src = shuffled[currentIndex];
-      player.play().catch(()=>{/* autoplay may be blocked */});
-    } else {
-      finished = true;
-      const final = computeAccuracyOnPlayed(totalVideos);
-      showAccuracy(final.proximityAvg);
-      exactMatchesText.textContent = `Exact Matches: ${final.exactMatches} / ${totalVideos}`;
-      if(Math.abs(final.proximityAvg - 1) < 1e-9) launchConfetti();
-      await window.onPlaylistFinished(final.proximityAvg, final.exactMatches);
-    }
-  });
-
-  reshuffleBtn.addEventListener('click', ()=>{
-    shuffled = shuffleArray(videos);
-    currentIndex = 0;
-    finished = false;
-    testMode = false;
-    player.src = shuffled[0];
-    player.play().catch(()=>{/* autoplay blocked */});
-    setProgress(0);
-    resultFilled.style.width = '0%';   // 🚨 clear bar
-    resultLabel.textContent = '--.--% accuracy';
-    exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
-  });
-
-  function launchConfetti(){
-    const canvas = document.getElementById('confetti');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    const pieces = [];
-    for(let i=0;i<220;i++){
-      pieces.push({
-        x: Math.random()*canvas.width,
-        y: Math.random()*canvas.height - canvas.height,
-        w: 6 + Math.random()*12,
-        h: 10 + Math.random()*16,
-        color: ['#ff3cac','#ffb347','#ffd54a','#7c5cff','#00d4ff','#66ff66'][Math.floor(Math.random()*6)],
-        rot: Math.random()*360, speed: 1 + Math.random()*6
-      });
-    }
-    let ticks = 0;
-    function draw(){
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      for(const p of pieces){
-        ctx.save();
-        ctx.translate(p.x,p.y);
-        ctx.rotate(p.rot * Math.PI/180);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
-        ctx.restore();
-        p.y += p.speed;
-        p.rot += (p.speed/2);
-        if(p.y > canvas.height + 20){ p.y = -20; p.x = Math.random()*canvas.width; }
-      }
-      ticks++;
-      if(ticks < 600) requestAnimationFrame(draw);
-    }
-    draw();
-  }
-
-  /* ---------- Reset helper ---------- */
-  function resetGame(){
-    shuffled = shuffleArray(videos);
-    currentIndex = 0;
-    finished = false;
-    testMode = false;
-    player.src = shuffled[0]; // don't autoplay
-    setProgress(0);
-    resultFilled.style.width = '0%';   // 🚨 clear bar
-    resultLabel.textContent = '--.--% accuracy';
-    exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
-  }
-
-  /* ---------- Leaderboard save flow ---------- */
-  window.onPlaylistFinished = async function(finalAccuracy, exactMatches){
-    const percentDisplay = (finalAccuracy * 100).toFixed(2);
-
-    if(testMode){
-      alert(`(TEST MODE) Run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\nScores from test mode cannot be submitted.`);
-      await loadLeaderboard();
-      resetGame();
-      return;
-    }
-
-    const save = confirm(`Your run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\n\nDo you want to save this score to the leaderboard?`);
-    if(save){
-      const name = prompt("Enter your name for the leaderboard:", "Player");
-      if(name){
-        await saveScore(name, finalAccuracy, exactMatches);
-        alert("Score saved!");
-      }
-    }
+  if(testMode){
+    alert(`(TEST MODE) Run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\nScores from test mode cannot be submitted.`);
     await loadLeaderboard();
     resetGame();
-  };
-
-  /* ---------- Test command handler ---------- */
-  function makeOrder(arr){
-    return arr.map(x => typeof x === 'number' ? `chones_${x}.mp4` : String(x));
+    return;
   }
 
-  window.handleCommand = function(command, args){
-    command = String(command).toLowerCase();
-    if(command === 'shuffle'){
-      if(!args || !Array.isArray(args) || args.length === 0){
-        console.warn("Usage: handleCommand('shuffle', [1,2,3,...])");
-        return;
+  const save = confirm(`Your run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\n\nDo you want to save this score to the leaderboard?`);
+  if(save){
+    const name = prompt("Enter your name for the leaderboard:", "Player");
+    if(name){
+      try {
+        await saveScore(name, finalAccuracy, exactMatches);
+        alert("Score saved!");
+      } catch(err) {
+        console.error('Failed to save score:', err);
+        alert("Failed to save score — see console for details.");
       }
-      shuffled = makeOrder(args);
-      currentIndex = 0;
-      finished = false;
-      testMode = true;
-      player.src = shuffled[0];
-      setProgress(0);
-      resultFilled.style.width = '0%';   // 🚨 clear bar
-      resultLabel.textContent = '--.--% accuracy';
-      exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
-      console.info("Forced shuffle applied:", shuffled);
-    } else {
-      console.warn("Unknown command:", command);
     }
-  };
-
-  document.getElementById('retryBtn').addEventListener('click', ()=> loadLeaderboard());
-  window.addEventListener('error', (e)=>{
-    console.error('Unhandled error:', e.error || e.message || e);
-    const container = document.getElementById('leaderboardList');
-    container.innerHTML = `<div class="lb-error">An error occurred — check console for details.</div>`;
-  });
-
-  /* ---------- Init ---------- */
+  }
+  await loadLeaderboard();
   resetGame();
-  loadLeaderboard().catch(err => {
-    console.error('loadLeaderboard initial error:', err);
-    const list = document.getElementById('leaderboardList');
-    list.innerHTML = `<div class="lb-error">Leaderboard load failed. Check console and retry.</div>`;
-    document.getElementById('retryBtn').style.display = 'inline-block';
-  });
+};
+
+/* ---------- Test command handler (copied from older file) ---------- */
+function makeOrder(arr){
+  return arr.map(x => typeof x === 'number' ? `chones_${x}.mp4` : String(x));
+}
+
+window.handleCommand = function(command, args){
+  command = String(command).toLowerCase();
+  if(command === 'shuffle'){
+    if(!args || !Array.isArray(args) || args.length === 0){
+      console.warn("Usage: handleCommand('shuffle', [1,2,3,...])");
+      return;
+    }
+    shuffled = makeOrder(args);
+    currentIndex = 0;
+    finished = false;
+    testMode = true;
+    player.src = shuffled[0];
+    setProgress(0);
+    resultFilled.style.width = '0%';
+    resultLabel.textContent = '--.--% accuracy';
+    exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+    console.info("Forced shuffle applied:", shuffled);
+  } else {
+    console.warn("Unknown command:", command);
+  }
+};
+
+document.getElementById('retryBtn').addEventListener('click', ()=> loadLeaderboard());
+window.addEventListener('error', (e)=>{
+  console.error('Unhandled error:', e.error || e.message || e);
+  const container = document.getElementById('leaderboardList');
+  container.innerHTML = `<div class="lb-error">An error occurred — check console for details.</div>`;
+});
+
+/* ---------- Init ---------- */
+resetGame();
+loadLeaderboard().catch(err=>{
+  console.error('loadLeaderboard initial error:', err);
+  const list = document.getElementById('leaderboardList');
+  list.innerHTML = `<div class="lb-error">Leaderboard load failed. Check console and retry.</div>`;
+  document.getElementById('retryBtn').style.display = 'inline-block';
+});
 </script>
 </body>
 </html>
