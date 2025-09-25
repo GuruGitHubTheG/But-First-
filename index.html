@@ -295,15 +295,16 @@
   const exactMatchesText = document.getElementById('exactMatchesText');
 
   let shuffled = [], currentIndex = 0, finished = false;
+  let testMode = false;
+
   function shuffleArray(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
   function setProgress(percent){ progressFilled.style.width = percent + '%'; progressLabel.textContent = Math.round(percent) + '%'; progressPercentText.textContent = Math.round(percent) + '%'; }
 
-  // robust parser: extracts "chones_XX.mp4" no matter the path/query
   function extractIndexFromName(name) {
     const base = name.split('/').pop().split('?')[0];
     const m = base.match(/^chones_(\d+)\.mp4$/);
     if (!m) return null;
-    return parseInt(m[1], 10) - 1; // 0-based
+    return parseInt(m[1], 10) - 1;
   }
 
   function computeAccuracyOnPlayed(m){
@@ -325,10 +326,7 @@
     for(let i=0;i<m;i++){
       const orig = playedOrigIndices[i];
       if(orig === null) continue;
-
-      // ✅ exact if original index equals shuffled index
       if(orig === i) exact++;
-
       const rank = origToRank.get(orig);
       let prox = (m===1 || rank===undefined) ? 1 : 1 - (Math.abs(i - rank) / (m - 1));
       proxSum += Math.max(0, prox);
@@ -361,6 +359,7 @@
       showAccuracy(proximityAvg);
       exactMatchesText.textContent = `Exact Matches: ${exactMatches} / ${totalVideos}`;
     } else {
+      resultFilled.style.width = '0%';   // 🚨 clear bar
       resultLabel.textContent = '--.--% accuracy';
       exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
     }
@@ -382,9 +381,11 @@
     shuffled = shuffleArray(videos);
     currentIndex = 0;
     finished = false;
+    testMode = false;
     player.src = shuffled[0];
     player.play().catch(()=>{/* autoplay blocked */});
     setProgress(0);
+    resultFilled.style.width = '0%';   // 🚨 clear bar
     resultLabel.textContent = '--.--% accuracy';
     exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
   });
@@ -424,9 +425,30 @@
     draw();
   }
 
+  /* ---------- Reset helper ---------- */
+  function resetGame(){
+    shuffled = shuffleArray(videos);
+    currentIndex = 0;
+    finished = false;
+    testMode = false;
+    player.src = shuffled[0]; // don't autoplay
+    setProgress(0);
+    resultFilled.style.width = '0%';   // 🚨 clear bar
+    resultLabel.textContent = '--.--% accuracy';
+    exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+  }
+
   /* ---------- Leaderboard save flow ---------- */
   window.onPlaylistFinished = async function(finalAccuracy, exactMatches){
     const percentDisplay = (finalAccuracy * 100).toFixed(2);
+
+    if(testMode){
+      alert(`(TEST MODE) Run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\nScores from test mode cannot be submitted.`);
+      await loadLeaderboard();
+      resetGame();
+      return;
+    }
+
     const save = confirm(`Your run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\n\nDo you want to save this score to the leaderboard?`);
     if(save){
       const name = prompt("Enter your name for the leaderboard:", "Player");
@@ -436,6 +458,34 @@
       }
     }
     await loadLeaderboard();
+    resetGame();
+  };
+
+  /* ---------- Test command handler ---------- */
+  function makeOrder(arr){
+    return arr.map(x => typeof x === 'number' ? `chones_${x}.mp4` : String(x));
+  }
+
+  window.handleCommand = function(command, args){
+    command = String(command).toLowerCase();
+    if(command === 'shuffle'){
+      if(!args || !Array.isArray(args) || args.length === 0){
+        console.warn("Usage: handleCommand('shuffle', [1,2,3,...])");
+        return;
+      }
+      shuffled = makeOrder(args);
+      currentIndex = 0;
+      finished = false;
+      testMode = true;
+      player.src = shuffled[0];
+      setProgress(0);
+      resultFilled.style.width = '0%';   // 🚨 clear bar
+      resultLabel.textContent = '--.--% accuracy';
+      exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+      console.info("Forced shuffle applied:", shuffled);
+    } else {
+      console.warn("Unknown command:", command);
+    }
   };
 
   document.getElementById('retryBtn').addEventListener('click', ()=> loadLeaderboard());
@@ -446,13 +496,7 @@
   });
 
   /* ---------- Init ---------- */
-  shuffled = shuffleArray(videos);
-  currentIndex = 0;
-  player.src = shuffled[0];
-  setProgress(0);
-  resultLabel.textContent = '--.--% accuracy';
-  exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
-
+  resetGame();
   loadLeaderboard().catch(err => {
     console.error('loadLeaderboard initial error:', err);
     const list = document.getElementById('leaderboardList');
