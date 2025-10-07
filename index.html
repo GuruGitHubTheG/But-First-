@@ -161,6 +161,216 @@
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
   }
+
+  /* Achievement overlay styling */
+  #achievementOverlayWrap{
+    position:fixed;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width: min(60vw, 420px); /* scaled down version of the vertical video size */
+    max-width:420px;
+    aspect-ratio:9/16; /* match chones videos */
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    pointer-events:none; /* don't block UI */
+    opacity:0;
+    transition:opacity 0.6s ease;
+  }
+  #achievementOverlayWrap.visible{ opacity: 1; }
+  #achievementOverlay{
+    width:100%;
+    height:100%;
+    border-radius:12px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.7);
+    background:#000;
+    object-fit:contain;
+  }
+
+  /* Hidden by default; appears only after unlock */
+  #bonusToggle{ display:none; }
+
+  /* Achievements: styled like leaderboard cards */
+  #achievementsList {
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin:6px 0 0;
+    list-style:none;
+    padding:0;
+  }
+  .achievement-card {
+    background: rgba(255,255,255,0.03);
+    border-radius:10px;
+    padding:8px 12px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-height:44px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    font-weight:700;
+    color:#ffffff;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .achievement-card .icon {
+    width:34px;
+    height:34px;
+    border-radius:8px;
+    display:inline-grid;
+    place-items:center;
+    font-size:1.05rem;
+    background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  }
+  .achievement-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 26px rgba(2,6,23,0.6);
+  }
+
+  /* Debug panel styles (hidden by default; callable) */
+  .debug-panel {
+    position: fixed;
+    right: 18px;
+    top: 18px;
+    width: 420px;
+    max-width: calc(100vw - 36px);
+    background: rgba(7,16,26,0.88);
+    border-radius: 12px;
+    padding: 0;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    z-index: 10050;
+    color: #e6eef8;
+    font-family: Inter, system-ui, -apple-system, Roboto, Arial;
+    display: none; /* hidden by default; open with handleCommand('debugMode') */
+    user-select: none;
+  }
+  .debug-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    cursor: move; /* indicates draggable */
+  }
+  .debug-title { font-weight:800; font-size:0.95rem; }
+  .debug-close {
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.04);
+    color:var(--muted);
+    padding:4px 8px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .debug-body {
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .debug-row { display:flex; gap:8px; align-items:center; }
+  .debug-row input[type="text"], .debug-row input[type="number"], .debug-row textarea {
+    flex:1;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.04);
+    background: rgba(255,255,255,0.02);
+    color: #e6eef8;
+    font-size:0.92rem;
+  }
+  .debug-buttons { display:flex; flex-wrap:wrap; gap:8px; }
+  .debug-buttons button { padding:8px 10px; border-radius:8px; font-weight:700; cursor:pointer; border:none; background: linear-gradient(90deg,var(--accentStart), var(--accentEnd)); color:white; }
+  .debug-small { padding:6px 8px; font-size:0.86rem; border-radius:8px; background:transparent; border:1px solid rgba(255,255,255,0.04); color:var(--muted); }
+  .debug-note { color:var(--muted); font-size:0.85rem; }
+  .debug-section-title { font-weight:700; font-size:0.92rem; margin-bottom:6px; color:#fff; }
+
+  /* TOP10 badge */
+  .top10-badge {
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:10px;
+    background: linear-gradient(90deg,#ffb84d,#ff6b6b);
+    color:#071427;
+    font-weight:800;
+    margin-left:10px;
+    box-shadow:0 6px 16px rgba(0,0,0,0.4);
+  }
+  
+/* --- Improved Achievement Popup (manual playback) --- */
+.achievement-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+.achievement-popup.visible {
+  display: flex;
+}
+
+.popup-inner video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Improved popup layout: stack video over button so button sits below the video (inside popup) */
+.popup-inner {
+  position: relative;
+  background: #000;
+  border-radius: 16px;
+  width: min(60vw, 420px);
+  aspect-ratio: 9 / 16;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  overflow: hidden;         /* keep popup clipping for rounded corners */
+  display: flex;
+  flex-direction: column;   /* stack video then button */
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px;
+  gap: 10px;
+}
+
+/* Make video expand within available popup space but leave room for the button */
+.popup-inner video {
+  width: 100%;
+  height: auto;
+  flex: 1 1 auto;                   /* let video grow to use available height */
+  max-height: calc(100% - 56px);    /* reserve ~56px for the button below */
+  border-radius: 12px;
+  object-fit: contain;
+  background: #000;
+  display: block;
+}
+
+/* Button placed below the video (not absolute) and centered */
+.close-bottom {
+  position: static; /* no absolute positioning */
+  margin: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center; /* center inside popup-inner */
+  transition: background .12s ease;
+}
+.close-bottom:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 </style>
 </head>
 <body>
@@ -170,6 +380,8 @@
         <h1>But first,</h1>
         <div style="display:flex;gap:8px">
           <button id="reshuffleBtn">Reshuffle & Play</button>
+          <!-- Bonus toggle appears only after it's unlocked (JS controls display) -->
+          <button id="bonusToggle" style="display:none">🎁 Bonus Mode</button>
         </div>
       </div>
 
@@ -199,6 +411,17 @@
         </div>
       </div>
 
+      <!-- Achievements UI -->
+      <div class="stat-card" id="achievementsCard">
+        <div class="bar-top-row">
+          <div class="left">Achievements</div>
+          <div class="right" id="achievementsCount">0 unlocked</div>
+        </div>
+        <ul id="achievementsList" class="muted">
+          <li style="color:var(--muted)">Loading…</li>
+        </ul>
+      </div>
+
       <div class="stat-card">
         <div class="bar-top-row">
           <div class="left">Leaderboard</div>
@@ -219,15 +442,101 @@
 
   <canvas id="confetti"></canvas>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+  <!-- ACHIEVEMENT POPUP (manual playback) -->
+<div id="achievementPopup" class="achievement-popup" aria-hidden="true">
+  <div class="popup-inner">
+    <video id="achievementVideo" playsinline webkit-playsinline controls preload="auto"></video>
+    <button id="closeAchievementBtn" class="close-bottom">✖</button>
+  </div>
+</div>
 
+
+  <!-- Debug panel (hidden by default; open with handleCommand('debugMode')) -->
+  <div id="debugPanel" class="debug-panel" aria-hidden="true" role="dialog" aria-label="Debug Mode" style="display:none">
+    <div class="debug-header" id="debugHeader">
+      <div class="debug-title">Debug Mode</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="debugClose" class="debug-close" title="Close">×</button>
+      </div>
+    </div>
+    <div class="debug-body">
+      <!-- ... keep debug controls as in your file ... -->
+      <div>
+        <div class="debug-section-title">Shuffle Control</div>
+        <div class="debug-row">
+          <input id="debugShuffleInput" type="text" placeholder="Comma-separated numbers for 'shuffle' (e.g. 1,2,3,...)" />
+          <button id="debugShuffleBtn" class="debug-small">Apply Shuffle</button>
+        </div>
+      </div>
+      <div>
+        <div class="debug-section-title">Achievements</div>
+        <div class="debug-buttons" style="margin-bottom:6px">
+          <button id="debugAchZero">Unlock 0 Accuracy</button>
+          <button id="debugAchHundred">Unlock 100 Accuracy</button>
+          <button id="debugAchSoClose">Unlock So Close!</button>
+          <button id="debugAch67">Unlock 67</button>
+          <button id="debugAchLast">Unlock Last Place</button>
+        </div>
+      </div>
+      <div>
+        <div class="debug-section-title">Bonus Mode</div>
+        <div class="debug-row">
+          <button id="debugUnlockBonus" class="debug-small">Unlock Bonus Mode</button>
+          <button id="debugResetBonus" class="debug-small">Reset Bonus Mode</button>
+        </div>
+      </div>
+      <div>
+        <div class="debug-section-title">Test Scores</div>
+        <div class="debug-row">
+          <input id="debugTestName" type="text" placeholder="Player name (for test score)" />
+          <button id="debugAddScore" class="debug-small">Add Random Test Score</button>
+        </div>
+      </div>
+      <div>
+	  <div class="debug-section-title">Reset</div>
+	  <div class="debug-row" style="gap:8px;flex-wrap:wrap">
+		<button id="debugResetAchievements" class="debug-small">Reset Achievements</button>
+		<button id="debugWipeDevice" class="debug-small" title="Deletes device doc + your scores & creates a new device ID">Wipe device & new ID</button>
+	  </div>
+	</div>
+  </div>
+
+<script type="module">
+/*
+  Single cleaned script — no duplicate declarations.
+  Key fixes:
+   - No overlapping 'achievementVideo' declarations; popup video element is the only one.
+   - computeAccuracyOnPlayed divides by count of valid items (fixes bonus-mode accuracy)
+   - showBonusToggle defined early (no ReferenceError)
+   - Achievement reset writes to Firestore reliably
+   - TOP 10 badge logic after saving score
+   - Debug panel available by handleCommand('debugMode')
+*/
+
+/* ----------------- Firestore imports ----------------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  deleteDoc
+} from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+/* ----------------- Firebase config ----------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyBIe-458HUFo2yv4ExSdrp9ydrg4yVHLZI",
   authDomain: "chones-fba45.firebaseapp.com",
   projectId: "chones-fba45",
-  storageBucket: "chones-fba45.firebasestorage.app",
+  storageBucket: "chones-fba45.appspot.com",
   messagingSenderId: "248867735301",
   appId: "1:248867735301:web:d331bf15c39a9a2c6f196c"
 };
@@ -235,33 +544,213 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let activeTab = "main"; // "main" or "exact"
+/* ----------------- UI refs & constants ----------------- */
 const totalVideos = 41;
+const mainVideos = Array.from({length: totalVideos}, (_,i) => `chones_${i+1}.mp4`);
+const bonusTotal = 37;
+const bonusVideos = Array.from({length: bonusTotal}, (_,i) => `bonus_${i+1}.mp4`);
 
-/* ---------- Firestore helpers ---------- */
-async function saveScore(name, accuracyFraction, exactMatches) {
-  // accuracyFraction expected in 0..1
-  const accuracyNum = Number((accuracyFraction * 100).toFixed(2));
-  await addDoc(collection(db, "scores"), {
-    name,
-    accuracy: accuracyNum,
-    exactMatches,
-    timestamp: new Date().toISOString()
+const player = document.getElementById('player');
+const reshuffleBtn = document.getElementById('reshuffleBtn');
+const bonusToggle = document.getElementById('bonusToggle');
+const progressFilled = document.getElementById('progressFilled');
+const progressLabel  = document.getElementById('progressLabel');
+const progressPercentText = document.getElementById('progressPercentText');
+const resultFilled = document.getElementById('resultFilled');
+const resultLabel = document.getElementById('resultLabel');
+const exactMatchesText = document.getElementById('exactMatchesText');
+
+const tabMain = document.getElementById('tabMain');
+const tabExact = document.getElementById('tabExact');
+
+const leaderboardList = document.getElementById('leaderboardList');
+const lbPlaceholder = document.getElementById('lb-placeholder');
+const retryBtn = document.getElementById('retryBtn');
+
+const achievementsList  = document.getElementById('achievementsList');
+const achievementsCount = document.getElementById('achievementsCount');
+
+/* Achievement popup elements (single, non-autoplay approach) */
+const achievementPopupVideo = document.getElementById('achievementVideo');
+achievementPopupVideo.src = 'achievement_get.mp4'; // ensure correct filename
+
+/* Debug panel refs */
+const debugPanel = document.getElementById('debugPanel');
+const debugHeader = document.getElementById('debugHeader');
+const debugClose = document.getElementById('debugClose');
+const debugShuffleInput = document.getElementById('debugShuffleInput');
+const debugShuffleBtn = document.getElementById('debugShuffleBtn');
+const debugAchZero = document.getElementById('debugAchZero');
+const debugAchHundred = document.getElementById('debugAchHundred');
+const debugAchSoClose = document.getElementById('debugAchSoClose');
+const debugAch67 = document.getElementById('debugAch67');
+const debugAchLast = document.getElementById('debugAchLast');
+const debugUnlockBonus = document.getElementById('debugUnlockBonus');
+const debugResetBonus = document.getElementById('debugResetBonus');
+const debugTestName = document.getElementById('debugTestName');
+const debugAddScore = document.getElementById('debugAddScore');
+const debugResetAchievements = document.getElementById('debugResetAchievements');
+
+/* ----------------- Device + cache ----------------- */
+let deviceId = null;
+let deviceDocCache = { achievements: {}, bonusUnlocked: false };
+
+/* Keep deviceId local only */
+function getOrCreateDeviceId(){
+  const key = 'deviceId_v1';
+  let id = localStorage.getItem(key);
+  if(!id){
+    id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'dev-' + Math.random().toString(36).slice(2,10);
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
+/* ----------------- Achievement display names/icons ----------------- */
+const ACH_KEYS = {
+  ZERO: '0_accuracy',
+  HUNDRED: '100_accuracy',
+  SO_CLOSE: 'so_close',
+  SIXTY_SEVEN: '67_percent',
+  LAST_PLACE: 'last_place',
+  CONFUSED_SPIRIT: 'confused_but_spirit' // if you add the special reverse-order achievement later
+};
+const ACH_DISPLAY = {
+  '0_accuracy': '0% Accuracy',
+  '67_percent': '67% Accuracy',
+  '100_accuracy': '100% Accuracy',
+  'last_place': 'Last Place!',
+  'so_close': 'So Close!',
+  'confused_but_spirit': "He's a little confused, but he's got the spirit!"
+};
+const ACH_ICON = {
+  '0_accuracy': '💀',
+  '67_percent': '🎯',
+  '100_accuracy': '🏆',
+  'last_place': '🐢',
+  'so_close': '😅',
+  'confused_but_spirit': '🤔'
+};
+
+/* ----------------- UI helpers ----------------- */
+function showBonusToggle(enabled) {
+  if (!bonusToggle) return;
+  if (enabled) {
+    bonusToggle.style.display = 'inline-block';
+    bonusToggle.textContent = (activeMode === 'bonus') ? '🎁 Bonus Mode (ON)' : '🎁 Bonus Mode';
+    bonusToggle.classList.toggle('active', activeMode === 'bonus');
+  } else {
+    bonusToggle.style.display = 'none';
+  }
+}
+
+function renderAchievementsUI(data){
+  const keys = Object.keys(data || {});
+  achievementsList.innerHTML = '';
+  achievementsCount.textContent = `${keys.length} unlocked`;
+  if(keys.length === 0){
+    achievementsList.innerHTML = '<li style="color:var(--muted)">No achievements yet</li>';
+    return;
+  }
+  keys.forEach(k => {
+    const li = document.createElement('li');
+    li.className = 'achievement-card';
+    const icon = document.createElement('div');
+    icon.className = 'icon';
+    icon.textContent = ACH_ICON[k] || '⭐';
+    const txt = document.createElement('div');
+    txt.textContent = ACH_DISPLAY[k] || k.replace(/_/g,' ');
+    li.appendChild(icon);
+    li.appendChild(txt);
+    achievementsList.appendChild(li);
   });
 }
 
-async function loadLeaderboard(showAll=false) {
+/* ----------------- Firestore device helpers ----------------- */
+async function loadOrCreateDeviceDoc(){
+  const dref = doc(db, 'devices', deviceId);
+  try {
+    const snap = await getDoc(dref);
+    if(snap.exists()){
+      const data = snap.data();
+      deviceDocCache.achievements = data.achievements || {};
+      deviceDocCache.bonusUnlocked = !!data.bonusUnlocked;
+    } else {
+      await setDoc(dref, {
+        achievements: {},
+        bonusUnlocked: false,
+        lastUpdated: serverTimestamp()
+      });
+      deviceDocCache = { achievements: {}, bonusUnlocked: false };
+    }
+  } catch(err){
+    console.error('Error loading/creating device doc:', err);
+    deviceDocCache = { achievements: {}, bonusUnlocked: false };
+  }
+  renderAchievementsUI(deviceDocCache.achievements);
+  showBonusToggle(deviceDocCache.bonusUnlocked);
+}
+
+async function updateDeviceDoc(updates){
+  const dref = doc(db, 'devices', deviceId);
+  deviceDocCache = {
+    achievements: { ...(deviceDocCache.achievements || {}), ...(updates.achievements || {}) },
+    bonusUnlocked: (typeof updates.bonusUnlocked !== 'undefined') ? updates.bonusUnlocked : deviceDocCache.bonusUnlocked
+  };
+
+  try {
+    await updateDoc(dref, {
+      achievements: deviceDocCache.achievements,
+      bonusUnlocked: deviceDocCache.bonusUnlocked,
+      lastUpdated: serverTimestamp()
+    });
+  } catch (err) {
+    console.warn('updateDoc failed — falling back to setDoc:', err);
+    try {
+      await setDoc(dref, {
+        achievements: deviceDocCache.achievements,
+        bonusUnlocked: deviceDocCache.bonusUnlocked,
+        lastUpdated: serverTimestamp()
+      }, { merge: true });
+    } catch(e){
+      console.error('setDoc fallback failed:', e);
+    }
+  }
+
+  renderAchievementsUI(deviceDocCache.achievements);
+  showBonusToggle(deviceDocCache.bonusUnlocked);
+}
+
+/* ----------------- Leaderboard helpers ----------------- */
+async function saveScore(name, accuracyFraction, exactMatches, collectionName = 'scores'){
+  const accuracyNum = Number((accuracyFraction * 100).toFixed(2));
+  const payload = {
+    name,
+    accuracy: accuracyNum,
+    exactMatches,
+    deviceId,
+    timestamp: new Date().toISOString()
+  };
+  const colRef = collection(db, collectionName);
+  const docRef = await addDoc(colRef, payload);
+  return docRef.id;
+}
+
+let activeTab = "main";
+let activeMode = 'main'; // 'main' or 'bonus'
+async function loadLeaderboard(showAll=false){
   const list = document.getElementById('leaderboardList');
   const placeholder = document.getElementById('lb-placeholder');
-  const retryBtn = document.getElementById('retryBtn');
+  const retryBtnLocal = document.getElementById('retryBtn');
   placeholder && (placeholder.textContent = 'Loading leaderboard…');
-  retryBtn.style.display = 'none';
+  retryBtnLocal.style.display = 'none';
   try {
     let q;
     const limitCount = showAll ? 1000 : 10;
+    const collectionName = (activeMode === 'bonus') ? 'bonusScores' : 'scores';
     if (activeTab === "main") {
       q = query(
-        collection(db, "scores"),
+        collection(db, collectionName),
         orderBy("accuracy", "desc"),
         orderBy("exactMatches", "desc"),
         orderBy("timestamp", "asc"),
@@ -269,7 +758,7 @@ async function loadLeaderboard(showAll=false) {
       );
     } else {
       q = query(
-        collection(db, "scores"),
+        collection(db, collectionName),
         orderBy("exactMatches", "desc"),
         orderBy("timestamp", "asc"),
         limit(limitCount)
@@ -278,16 +767,15 @@ async function loadLeaderboard(showAll=false) {
 
     const querySnapshot = await getDocs(q);
     const scores = [];
-    querySnapshot.forEach((doc) => scores.push(doc.data()));
+    querySnapshot.forEach((docSnap) => scores.push({ id: docSnap.id, ...docSnap.data() }));
     renderLeaderboard(scores, showAll);
   } catch (err) {
     console.error('Failed to load leaderboard:', err);
     list.innerHTML = `<div class="lb-error">Leaderboard unavailable — ${String(err.message || err)}<br><small>See console for details.</small></div>`;
-    retryBtn.style.display = 'inline-block';
+    retryBtnLocal.style.display = 'inline-block';
   }
 }
 
-/* ---------- UI helpers ---------- */
 function ordinal(n){
   const s=["th","st","nd","rd"];
   const v = n%100;
@@ -308,8 +796,8 @@ function renderLeaderboard(scores, showAll=false){
     card.className = "lb-card";
 
     const accuracyVal = Number(s.accuracy);
-    const allExactMatches = Number(s.exactMatches) === totalVideos;
-    // rainbow only for perfect accuracy OR all exact matches (41/41)
+    const denomForMatches = (activeMode === 'bonus') ? bonusTotal : totalVideos;
+    const allExactMatches = Number(s.exactMatches) === denomForMatches;
     if(!isNaN(accuracyVal) && (Math.abs(accuracyVal - 100) < 1e-6 || allExactMatches)){
       card.classList.add("rainbow");
     } else if(rank === 1){
@@ -338,9 +826,8 @@ function renderLeaderboard(scores, showAll=false){
     accEl.textContent = ( (typeof s.accuracy === "number") ? s.accuracy.toFixed(2) : Number(s.accuracy).toFixed(2) ) + "% accuracy";
 
     const matEl = document.createElement("div");
-    matEl.textContent = `${s.exactMatches} / ${totalVideos} Exact Matches`;
+    matEl.textContent = `${s.exactMatches} / ${denomForMatches} Exact Matches`;
 
-    // When the "exact" tab is active, we flip prominent fields.
     if(activeTab === "exact"){
       matEl.className = "lb-accuracy";
       accEl.className = "lb-matches";
@@ -358,7 +845,6 @@ function renderLeaderboard(scores, showAll=false){
     container.appendChild(card);
   });
 
-  // If we're not showing all and there are at least the default page size, allow expanding.
   if(!showAll && scores.length >= 10){
     const showAllBtn = document.createElement("button");
     showAllBtn.textContent = "Show All";
@@ -369,122 +855,159 @@ function renderLeaderboard(scores, showAll=false){
   }
 }
 
-/* ---------- Leaderboard tabs ---------- */
-document.getElementById("tabMain").addEventListener("click", () => {
+/* ----------------- Tabs ----------------- */
+tabMain.addEventListener("click", () => {
   activeTab = "main";
-  document.getElementById("tabMain").classList.add("active");
-  document.getElementById("tabExact").classList.remove("active");
+  tabMain.classList.add("active");
+  tabExact.classList.remove("active");
   loadLeaderboard();
 });
-document.getElementById("tabExact").addEventListener("click", () => {
+tabExact.addEventListener("click", () => {
   activeTab = "exact";
-  document.getElementById("tabExact").classList.add("active");
-  document.getElementById("tabMain").classList.remove("active");
+  tabExact.classList.add("active");
+  tabMain.classList.remove("active");
   loadLeaderboard();
 });
 
-/* ---------- Video shuffle & accuracy logic ---------- */
-const videos = Array.from({length: totalVideos}, (_,i) => `chones_${i+1}.mp4`);
-const player = document.getElementById('player');
-const reshuffleBtn = document.getElementById('reshuffleBtn');
-const progressFilled = document.getElementById('progressFilled');
-const progressLabel  = document.getElementById('progressLabel');
-const progressPercentText = document.getElementById('progressPercentText');
-const resultFilled = document.getElementById('resultFilled');
-const resultLabel = document.getElementById('resultLabel');
-const exactMatchesText = document.getElementById('exactMatchesText');
-
+/* ----------------- Shuffle / progress / accuracy logic ----------------- */
+let videos = mainVideos.slice();
 let shuffled = [], currentIndex = 0, finished = false, testMode = false;
 
 function shuffleArray(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 function setProgress(percent){ progressFilled.style.width = percent + '%'; progressLabel.textContent = Math.round(percent) + '%'; progressPercentText.textContent = Math.round(percent) + '%'; }
-function extractIndexFromName(name) { const base = name.split('/').pop().split('?')[0]; const m = base.match(/^chones_(\d+)\.mp4$/); return m ? parseInt(m[1], 10) - 1 : null; }
 
+/* extract index for chones_N or bonus_N — returns null if not matched */
+function extractIndexFromName(name) {
+  const base = name.split('/').pop().split('?')[0];
+  let m = base.match(/^chones_(\d+)\.mp4$/);
+  if(m) return parseInt(m[1], 10) - 1;
+  m = base.match(/^bonus_(\d+)\.mp4$/);
+  if(m) return parseInt(m[1], 10) - 1;
+  return null;
+}
+
+/* FIXED accuracy: operate only on valid parsed items (avoid dividing by m when some items are unparsable) */
 function computeAccuracyOnPlayed(m){
   if(m <= 0) return { proximityAvg: null, exactMatches: 0 };
-  const playedOrigIndices = shuffled.slice(0, m).map(s => extractIndexFromName(s));
-  const sorted = playedOrigIndices.map((orig,i)=>({orig,i})).filter(o=>o.orig !== null).sort((a,b)=>a.orig - b.orig);
-  const origToRank = new Map(); sorted.forEach((o, rank) => origToRank.set(o.orig, rank));
+
+  const played = shuffled.slice(0, m).map(s => extractIndexFromName(s));
+  // keep each item's played position (0-based) and original index
+  const filtered = played.map((orig, idx) => ({ orig, playedPos: idx })).filter(x => x.orig !== null);
+  const count = filtered.length;
+  if(count === 0) return { proximityAvg: null, exactMatches: 0 };
+
+  // rank them by original index
+  const sortedByOrig = filtered.slice().sort((a,b) => a.orig - b.orig);
+  const origToRank = new Map(sortedByOrig.map((o, i) => [o.orig, i]));
+
   let proxSum = 0, exact = 0;
-  for(let i=0;i<m;i++){
-    const orig = playedOrigIndices[i]; if(orig === null) continue;
-    if(orig === i) exact++;
-    const rank = origToRank.get(orig);
-    let prox = (m===1 || rank===undefined) ? 1 : 1 - (Math.abs(i - rank) / (m - 1));
+  filtered.forEach(item => {
+    if(item.orig === item.playedPos) exact++;
+    const rank = origToRank.get(item.orig);
+    let prox = (count === 1 || rank === undefined) ? 1 : 1 - (Math.abs(item.playedPos - rank) / (count - 1));
     proxSum += Math.max(0, prox);
-  }
-  return { proximityAvg: proxSum / m, exactMatches: exact };
+  });
+
+  return { proximityAvg: proxSum / count, exactMatches: exact };
 }
 
 function showAccuracy(prox){
+  if(prox == null || isNaN(prox)){
+    resultFilled.style.width = '0%';
+    resultLabel.textContent = '--.--% accuracy';
+    return;
+  }
   const pct = prox * 100;
   resultFilled.style.width = pct.toFixed(4) + '%';
   resultLabel.textContent = pct.toFixed(2) + '% accuracy';
 }
 
+/* Reset game for current activeMode */
 function resetGame(){
+  videos = (activeMode === 'bonus') ? bonusVideos.slice() : mainVideos.slice();
   shuffled = shuffleArray(videos);
   currentIndex = 0;
   finished = false;
   testMode = false;
-  player.src = shuffled[0]; // don't autoplay on reset call
+  player.src = shuffled[0];
   setProgress(0);
   resultFilled.style.width = '0%';
   resultLabel.textContent = '--.--% accuracy';
-  exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+  exactMatchesText.textContent = `Exact Matches: 0 / ${ (activeMode === 'bonus') ? bonusTotal : totalVideos }`;
 }
 
+/* Time/progress and ended handling */
 player.addEventListener('timeupdate', ()=>{
   if(finished) return;
   if(player.duration && isFinite(player.duration) && player.duration > 0){
     const frac = Math.max(0, Math.min(1, player.currentTime / player.duration));
     const played = currentIndex + frac;
-    setProgress((played / totalVideos) * 100);
+    const denom = (activeMode === 'bonus') ? bonusTotal : totalVideos;
+    setProgress((played / denom) * 100);
   }
 });
 
 player.addEventListener('ended', async ()=>{
   currentIndex++;
-  setProgress((currentIndex / totalVideos) * 100);
-  const { proximityAvg, exactMatches } = computeAccuracyOnPlayed(currentIndex);
+  const denom = (activeMode === 'bonus') ? bonusTotal : totalVideos;
+  setProgress((currentIndex / denom) * 100);
+
+  // compute accuracy for both modes using the same algorithm (recalibrated by count)
+  const res = computeAccuracyOnPlayed(currentIndex);
+  const proximityAvg = res.proximityAvg;
+  const exactMatches = res.exactMatches;
+
   if(proximityAvg != null){
     showAccuracy(proximityAvg);
-    exactMatchesText.textContent = `Exact Matches: ${exactMatches} / ${totalVideos}`;
+    const denomLabel = (activeMode === 'bonus') ? bonusTotal : totalVideos;
+    exactMatchesText.textContent = `Exact Matches: ${exactMatches} / ${denomLabel}`;
   } else {
-    resultFilled.style.width = '0%';
-    resultLabel.textContent = '--.--% accuracy';
-    exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+    showAccuracy(null);
+    exactMatchesText.textContent = `Exact Matches: 0 / ${(activeMode === 'bonus') ? bonusTotal : totalVideos}`;
   }
 
-  if(currentIndex < totalVideos){
+  if(currentIndex < denom){
     player.src = shuffled[currentIndex];
-    player.play().catch(()=>{ /* autoplay may be blocked */ });
+    player.play().catch(()=>{ /* autoplay blocked */ });
   } else {
     finished = true;
-    const final = computeAccuracyOnPlayed(totalVideos);
+    const final = computeAccuracyOnPlayed( (activeMode === 'bonus') ? bonusTotal : totalVideos );
     showAccuracy(final.proximityAvg);
-    exactMatchesText.textContent = `Exact Matches: ${final.exactMatches} / ${totalVideos}`;
+    exactMatchesText.textContent = `Exact Matches: ${final.exactMatches} / ${(activeMode === 'bonus') ? bonusTotal : totalVideos}`;
     if(Math.abs(final.proximityAvg - 1) < 1e-9) launchConfetti();
     await window.onPlaylistFinished(final.proximityAvg, final.exactMatches);
   }
 });
 
+/* Reshuffle button */
 reshuffleBtn.addEventListener('click', ()=>{
+  videos = (activeMode === 'bonus') ? bonusVideos.slice() : mainVideos.slice();
   shuffled = shuffleArray(videos);
   currentIndex = 0;
   finished = false;
   testMode = false;
   player.src = shuffled[0];
   player.play().catch(()=>{/* autoplay blocked */});
+  const denom = (activeMode === 'bonus') ? bonusTotal : totalVideos;
   setProgress(0);
   resultFilled.style.width = '0%';
   resultLabel.textContent = '--.--% accuracy';
-  exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
+  exactMatchesText.textContent = `Exact Matches: 0 / ${denom}`;
 });
 
-/* ---------- Confetti (copied from older version) ---------- */
+/* Toggle bonus mode and auto-refresh leaderboard */
+bonusToggle.addEventListener('click', ()=>{
+  activeMode = (activeMode === 'main') ? 'bonus' : 'main';
+  bonusToggle.classList.toggle('active', activeMode === 'bonus');
+  bonusToggle.textContent = (activeMode === 'bonus') ? '🎁 Bonus Mode (ON)' : '🎁 Bonus Mode';
+  resetGame();
+  loadLeaderboard();
+});
+
+/* ----------------- Confetti ----------------- */
 function launchConfetti(){
   const canvas = document.getElementById('confetti');
+  if(!canvas) return;
   const ctx = canvas.getContext('2d');
   canvas.width = window.innerWidth; canvas.height = window.innerHeight;
   const pieces = [];
@@ -518,24 +1041,250 @@ function launchConfetti(){
   draw();
 }
 
-/* ---------- Save flow after playlist finishes (copied & restored from older version) ---------- */
+/* ----------------------------------------------------------------------
+   Achievement popup: warmup + resilient play/pause to avoid the freeze
+   ---------------------------------------------------------------------- */
+const achievementPopup = document.getElementById('achievementPopup');
+const achievementVideo = document.getElementById('achievementVideo');
+const closeAchievementBtn = document.getElementById('closeAchievementBtn');
+
+/* Warmup element (hidden) to prime the decoder */
+let achievementWarmupReady = false;
+async function ensureWarmup() {
+  if (achievementWarmupReady) return;
+  try {
+    let warm = document.getElementById('achievementWarmup');
+    if (!warm) {
+      warm = document.createElement('video');
+      warm.id = 'achievementWarmup';
+      warm.preload = 'auto';
+      warm.muted = false;
+      warm.playsInline = true;
+      // keep it offscreen / inert
+      warm.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+      document.body.appendChild(warm);
+    }
+    const src = 'achievement_get.mp4';
+    if (!warm.src || warm.src.indexOf(src) === -1) warm.src = src;
+
+    // If already ready, mark and return
+    if (warm.readyState >= 3) {
+      achievementWarmupReady = true;
+      return;
+    }
+
+    // Try to play muted (most browsers allow muted autoplay)
+    await new Promise((resolve) => {
+      const onPlaying = () => {
+        warm.removeEventListener('playing', onPlaying);
+        // pause quickly; decoder stays primed
+        try { warm.pause(); } catch (e) {}
+        achievementWarmupReady = true;
+        resolve();
+      };
+      warm.addEventListener('playing', onPlaying);
+
+      const p = warm.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch((err) => {
+          // If autoplay blocked, fall back to waiting for canplay
+          console.warn('Warmup autoplay blocked:', err);
+          warm.removeEventListener('playing', onPlaying);
+          const onCanPlay = () => {
+            warm.removeEventListener('canplay', onCanPlay);
+            try { warm.pause(); } catch (e) {}
+            achievementWarmupReady = true;
+            resolve();
+          };
+          warm.addEventListener('canplay', onCanPlay);
+          // start fetching
+          try { warm.load(); } catch(e){}
+          // safety timeout in case events don't fire
+          setTimeout(() => { achievementWarmupReady = true; resolve(); }, 600);
+        });
+      }
+    });
+  } catch (e) {
+    console.warn('Warmup failed (non-fatal):', e);
+    achievementWarmupReady = true; // don't block feature forever
+  }
+}
+
+/* Recovery helper when playback stalls/waits */
+async function tryRecoverPlayback() {
+  try {
+    // quick seek tweak to nudge decoder (small backwards seek)
+    const ct = (typeof achievementVideo.currentTime === 'number') ? achievementVideo.currentTime : 0;
+    // attempt small backward seek (if possible)
+    const newTime = Math.max(0, ct - 0.05);
+    if (!isNaN(newTime)) {
+      try { achievementVideo.currentTime = newTime; } catch (e) { /* ignore */ }
+    }
+    try { await achievementVideo.play(); } catch (e) { /* ignore */ }
+  } catch (e) {
+    console.warn('Recovery attempt failed:', e);
+  }
+}
+
+/* Listen for stalled/waiting and attempt quick recovery */
+achievementVideo.addEventListener('waiting', () => {
+  console.warn('achievementVideo: waiting -> attempting recovery');
+  tryRecoverPlayback();
+});
+achievementVideo.addEventListener('stalled', () => {
+  console.warn('achievementVideo: stalled -> attempting recovery');
+  tryRecoverPlayback();
+});
+achievementVideo.addEventListener('error', (ev) => {
+  console.error('achievementVideo error event:', ev);
+});
+
+/* Show popup: warmup first, then play resiliently */
+async function showAchievementPopup() {
+  achievementPopup.classList.add('visible');
+  achievementPopup.setAttribute('aria-hidden', 'false');
+
+  // warm up decoder in hidden video first (best-effort)
+  await ensureWarmup();
+
+  const wantSrc = 'achievement_get.mp4';
+  if (!achievementVideo.src || achievementVideo.src.indexOf(wantSrc) === -1) {
+    achievementVideo.src = wantSrc;
+  }
+  achievementVideo.preload = 'auto';
+  achievementVideo.muted = false;     // helps autoplay succeed
+  achievementVideo.currentTime = 0;
+
+  // try to play once we have canplay or readyState
+  const tryPlayNow = () => {
+    const p = achievementVideo.play();
+    if (p && p.catch) {
+      p.catch(err => {
+        console.warn('achievementVideo autoplay failed:', err);
+        // if autoplay blocked, do nothing — user can press play.
+      });
+    }
+  };
+
+  if (achievementVideo.readyState >= 3) {
+    tryPlayNow();
+  } else {
+    const onCanPlay = () => {
+      achievementVideo.removeEventListener('canplay', onCanPlay);
+      tryPlayNow();
+    };
+    achievementVideo.addEventListener('canplay', onCanPlay);
+    try { achievementVideo.load(); } catch(e){ /* ignore */ }
+  }
+}
+
+/* Hide popup: pause/reset but KEEP src to avoid decoder teardown */
+function hideAchievementPopup() {
+  achievementPopup.classList.remove('visible');
+  achievementPopup.setAttribute('aria-hidden', 'true');
+  try { achievementVideo.pause(); } catch (e) {}
+  try { achievementVideo.currentTime = 0; } catch (e) {}
+  achievementVideo.muted = true;
+}
+
+/* Close handlers (click outside / button / Esc) */
+closeAchievementBtn.addEventListener('click', hideAchievementPopup);
+achievementPopup.addEventListener('click', (e) => {
+  if (e.target === achievementPopup) hideAchievementPopup();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && achievementPopup.classList.contains('visible')) hideAchievementPopup();
+});
+
+/* Keep ended tidy */
+achievementVideo.addEventListener('ended', () => {
+  try { achievementVideo.currentTime = 0; } catch (e) {}
+  try { achievementVideo.pause(); } catch (e) {}
+});
+
+
+
+/* ----------------- Determine newly unlocked achievements ----------------- */
+function determineNewAchievements(awardedObj){
+  const newly = [];
+  const current = deviceDocCache.achievements || {};
+  for(const k of Object.keys(awardedObj)){
+    if(awardedObj[k] && !current[k]){
+      newly.push(k);
+    }
+  }
+  return newly;
+}
+
+/* ----------------- Save flow after playlist finishes ----------------- */
 window.onPlaylistFinished = async function(finalAccuracy, exactMatches){
-  // finalAccuracy is a fraction 0..1
-  const percentDisplay = (finalAccuracy * 100).toFixed(2);
+  const mainDenom = totalVideos;
+  const bonusDenom = bonusTotal;
 
   if(testMode){
-    alert(`(TEST MODE) Run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\nScores from test mode cannot be submitted.`);
+    alert(`(TEST MODE) Run finished with ${(finalAccuracy*100).toFixed(2)}% accuracy and ${exactMatches} exact matches.\nScores from test mode cannot be submitted.`);
     await loadLeaderboard();
     resetGame();
     return;
   }
 
-  const save = confirm(`Your run finished with ${percentDisplay}% accuracy and ${exactMatches} exact matches.\n\nDo you want to save this score to the leaderboard?`);
+  const denom = (activeMode === 'bonus') ? bonusDenom : mainDenom;
+  const displayAcc = (finalAccuracy === null) ? '--' : ( (finalAccuracy*100).toFixed(2) );
+
+  const save = confirm(`Your run finished with ${displayAcc}% accuracy and ${exactMatches} exact matches.\n\nDo you want to save this score to the leaderboard?`);
   if(save){
     const name = prompt("Enter your name for the leaderboard:", "Player");
     if(name){
       try {
-        await saveScore(name, finalAccuracy, exactMatches);
+        const collectionName = (activeMode === 'bonus') ? 'bonusScores' : 'scores';
+        const savedDocId = await saveScore(name, finalAccuracy || 0, exactMatches, collectionName);
+
+        // Award achievements (parity between main/bonus but with main extra awards)
+        const awards = {};
+        if(finalAccuracy === 0) awards[ACH_KEYS.ZERO] = true;
+        if(finalAccuracy === 1) awards[ACH_KEYS.HUNDRED] = true;
+        if(activeMode === 'main'){
+          if(typeof exactMatches === 'number' && exactMatches >= (totalVideos - 2) && exactMatches < totalVideos) awards[ACH_KEYS.SO_CLOSE] = true;
+          if(finalAccuracy !== null && finalAccuracy >= 0.66 && finalAccuracy <= 0.68) awards[ACH_KEYS.SIXTY_SEVEN] = true;
+        }
+
+        const newly = determineNewAchievements(awards);
+        if(newly.length > 0){
+          const toUpdate = { achievements: {} };
+          newly.forEach(k => toUpdate.achievements[k] = true);
+          const hadAnyBefore = Object.keys(deviceDocCache.achievements || {}).length > 0;
+          if(!hadAnyBefore){
+            toUpdate.bonusUnlocked = true;
+          }
+          await updateDeviceDoc(toUpdate);
+          if(!hadAnyBefore) showBonusToggle(true);
+          showAchievementPopup();
+        }
+
+        // Last-place check (only for main scores)
+        if(activeMode === 'main'){
+          try {
+            const lastQ = query(
+              collection(db, 'scores'),
+              orderBy('accuracy', 'asc'),
+              orderBy('exactMatches', 'asc'),
+              orderBy('timestamp', 'asc'),
+              limit(1)
+            );
+            const lastSnap = await getDocs(lastQ);
+            let lastDocId = null;
+            lastSnap.forEach(d => { lastDocId = d.id; });
+            if(lastDocId && lastDocId === savedDocId){
+              if(!deviceDocCache.achievements || !deviceDocCache.achievements[ACH_KEYS.LAST_PLACE]){
+                await updateDeviceDoc({ achievements: { [ACH_KEYS.LAST_PLACE]: true }});
+                showAchievementPopup();
+              }
+            }
+          } catch(err){
+            console.error('Error checking last-place:', err);
+          }
+        }
+
         alert("Score saved!");
       } catch(err) {
         console.error('Failed to save score:', err);
@@ -543,11 +1292,12 @@ window.onPlaylistFinished = async function(finalAccuracy, exactMatches){
       }
     }
   }
+
   await loadLeaderboard();
   resetGame();
 };
 
-/* ---------- Test command handler (copied from older file) ---------- */
+/* ----------------- Developer command handler ----------------- */
 function makeOrder(arr){
   return arr.map(x => typeof x === 'number' ? `chones_${x}.mp4` : String(x));
 }
@@ -569,10 +1319,248 @@ window.handleCommand = function(command, args){
     resultLabel.textContent = '--.--% accuracy';
     exactMatchesText.textContent = `Exact Matches: 0 / ${totalVideos}`;
     console.info("Forced shuffle applied:", shuffled);
+  } else if(command === 'debugmode'){
+    showDebugPanel();
   } else {
     console.warn("Unknown command:", command);
   }
 };
+
+/* ----------------- Debug panel behaviors ----------------- */
+function showDebugPanel(){
+  if(!debugPanel) return;
+  debugPanel.style.display = 'block';
+  debugPanel.setAttribute('aria-hidden', 'false');
+  attachDebugHandlers();
+  debugPanel.style.zIndex = 10050;
+}
+
+// Replace the existing click listener with a pointerdown handler
+debugClose.addEventListener('pointerdown', (e) => {
+  // Prevent the draggable handler from stealing the event and stop propagation
+  e.stopPropagation();
+  e.preventDefault();
+  debugPanel.style.display = 'none';
+  debugPanel.setAttribute('aria-hidden', 'true');
+});
+
+/* draggable header (optional) */
+(function makeDebugDraggable(){
+  let dragging = false;
+  let startX = 0, startY = 0, origX = 0, origY = 0;
+  // In the makeDebugDraggable() function, change the pointerdown handler to ignore clicks on the close button:
+debugHeader.addEventListener('pointerdown', (e) => {
+  // don't start dragging if the user clicked the close button (or its children)
+  if (e.target && e.target.closest && e.target.closest('#debugClose')) {
+    return;
+  }
+  dragging = true;
+  debugHeader.setPointerCapture(e.pointerId);
+  const rect = debugPanel.getBoundingClientRect();
+  startX = e.clientX;
+  startY = e.clientY;
+  origX = rect.left;
+  origY = rect.top;
+  document.body.style.userSelect = 'none';
+});
+
+  window.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    let dx = e.clientX - startX;
+    let dy = e.clientY - startY;
+    debugPanel.style.right = 'auto';
+    debugPanel.style.left = Math.max(6, origX + dx) + 'px';
+    debugPanel.style.top = Math.max(6, origY + dy) + 'px';
+  });
+  window.addEventListener('pointerup', (e)=>{
+    if(dragging){
+      dragging = false;
+      document.body.style.userSelect = '';
+    }
+  });
+})();
+
+function attachDebugHandlers(){
+  debugShuffleBtn.onclick = ()=>{
+    const v = debugShuffleInput.value.trim();
+    if(!v) return alert('Enter comma-separated numbers for the shuffle.');
+    const parts = v.split(',').map(x=>Number(x.trim())).filter(n=>!isNaN(n));
+    if(parts.length === 0) return alert('No valid numbers found.');
+    window.handleCommand('shuffle', parts);
+  };
+
+  const setAchievement = async (key) => {
+    try {
+      if(!deviceId) return alert('No deviceId yet (wait a moment for initialization).');
+      const current = deviceDocCache.achievements || {};
+      if(current[key]){
+        console.log('Achievement already set:', key);
+      } else {
+        const upd = { achievements: {} };
+        upd.achievements[key] = true;
+        const hadAnyBefore = Object.keys(deviceDocCache.achievements || {}).length > 0;
+        if(!hadAnyBefore) upd.bonusUnlocked = true;
+        await updateDeviceDoc(upd);
+        if(!hadAnyBefore) showBonusToggle(true);
+        showAchievementPopup();
+        console.log('Set achievement:', key);
+      }
+    } catch(e){
+      console.error('Error setting achievement', key, e);
+      alert('Failed to set achievement - see console.');
+    }
+  };
+
+  debugAchZero.onclick = ()=> setAchievement(ACH_KEYS.ZERO);
+  debugAchHundred.onclick = ()=> setAchievement(ACH_KEYS.HUNDRED);
+  debugAchSoClose.onclick = ()=> setAchievement(ACH_KEYS.SO_CLOSE);
+  debugAch67.onclick = ()=> setAchievement(ACH_KEYS.SIXTY_SEVEN);
+  debugAchLast.onclick = ()=> setAchievement(ACH_KEYS.LAST_PLACE);
+
+  debugUnlockBonus.onclick = async ()=>{
+    try {
+      await updateDeviceDoc({ bonusUnlocked: true });
+      showBonusToggle(true);
+      alert('Bonus unlocked on device.');
+    } catch(e){
+      console.error('Failed to unlock bonus', e);
+      alert('Failed to unlock bonus - see console.');
+    }
+  };
+  debugResetBonus.onclick = async ()=>{
+    try {
+      await updateDeviceDoc({ bonusUnlocked: false });
+      showBonusToggle(false);
+      alert('Bonus reset on device.');
+    } catch(e){
+      console.error('Failed to reset bonus', e);
+      alert('Failed to reset bonus - see console.');
+    }
+  };
+
+  debugAddScore.onclick = async ()=>{
+    const name = (debugTestName.value && debugTestName.value.trim()) ? debugTestName.value.trim() : ('Test' + Math.floor(Math.random()*1000));
+    const acc = Math.random();
+    const exact = Math.floor(Math.random() * (totalVideos + 1));
+    try {
+      await saveScore(name, acc, exact, 'scores');
+      alert(`Random test score added: ${name} - ${(acc*100).toFixed(2)}% - ${exact} exact`);
+      await loadLeaderboard();
+    } catch(e){
+      console.error('Failed to add test score', e);
+      alert('Failed to add test score - see console.');
+    }
+  };
+
+  debugResetAchievements.onclick = async ()=>{
+    if(!confirm('Reset achievements for this device? This will clear cloud device achievements.')) return;
+    try {
+      // Clear cache and write empty achievements object to Firestore
+      deviceDocCache.achievements = {};
+      const dref = doc(db, 'devices', deviceId);
+      await setDoc(dref, { achievements: {}, lastUpdated: serverTimestamp() }, { merge: true });
+      renderAchievementsUI(deviceDocCache.achievements);
+      alert('Achievements reset in Firestore for this device.');
+    } catch(e){
+      console.error('Failed to reset achievements', e);
+      alert('Failed to reset achievements - see console.');
+    }
+  };
+  
+    // --- Wipe device data & create new device ID ---
+  const debugWipeDeviceBtn = document.getElementById('debugWipeDevice');
+  if (debugWipeDeviceBtn) {
+    debugWipeDeviceBtn.onclick = async () => {
+      if (!deviceId) return alert('No deviceId available yet (wait a moment).');
+
+      const confirmed = confirm(
+        'This will PERMANENTLY delete this device\'s cloud data (device doc, scores submitted with this device) and create a NEW device ID on this browser.\n\n' +
+        'Are you sure you want to continue?'
+      );
+      if (!confirmed) return;
+
+      const oldId = deviceId;
+      debugWipeDeviceBtn.disabled = true;
+      debugWipeDeviceBtn.textContent = 'Wiping...';
+
+      try {
+        // 1) Delete scores in both collections that match deviceId
+        const scoreCollections = ['scores', 'bonusScores'];
+        for (const colName of scoreCollections) {
+          try {
+            const qSnap = await getDocs(collection(db, colName));
+            for (const docSnap of qSnap.docs) {
+              const data = docSnap.data() || {};
+              if (data.deviceId && String(data.deviceId) === String(oldId)) {
+                try {
+                  await deleteDoc(doc(db, colName, docSnap.id));
+                } catch (e) {
+                  console.warn(`Failed to delete ${colName}/${docSnap.id}:`, e);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn(`Failed to scan collection ${colName}:`, e);
+          }
+        }
+
+        // 2) Delete device doc
+        try {
+          await deleteDoc(doc(db, 'devices', oldId));
+        } catch (e) {
+          console.warn('Failed to delete device doc:', e);
+        }
+
+        // 3) Clear local storage device key and create a new device ID
+        try {
+          localStorage.removeItem('deviceId_v1');
+        } catch(e) { /* ignore */ }
+
+        // generate new id & re-init local device state
+        deviceId = getOrCreateDeviceId(); // will create and persist a new id
+        deviceDocCache = { achievements: {}, bonusUnlocked: false };
+
+        // create device doc in Firestore (new blank doc)
+        try {
+          await setDoc(doc(db, 'devices', deviceId), {
+            achievements: {},
+            bonusUnlocked: false,
+            lastUpdated: serverTimestamp()
+          }, { merge: true });
+        } catch (e) {
+          console.warn('Failed to create new device doc in Firestore:', e);
+        }
+
+        // 4) Update UI and reload leaderboard + state
+        renderAchievementsUI(deviceDocCache.achievements);
+        showBonusToggle(false);
+        resetGame();
+        await loadLeaderboard();
+
+        alert('Device wiped and new device ID created. You are now a fresh device: ' + deviceId);
+      } catch (err) {
+        console.error('Wipe device failed:', err);
+        alert('Wipe failed — check console for details.');
+      } finally {
+        debugWipeDeviceBtn.disabled = false;
+        debugWipeDeviceBtn.textContent = 'Wipe device & new ID';
+      }
+    };
+  }
+
+}
+
+/* ----------------- Initialization ----------------- */
+deviceId = getOrCreateDeviceId();
+loadOrCreateDeviceDoc().catch(err => console.error('Device load error:', err));
+
+resetGame();
+loadLeaderboard().catch(err=>{
+  console.error('loadLeaderboard initial error:', err);
+  const list = document.getElementById('leaderboardList');
+  list.innerHTML = `<div class="lb-error">Leaderboard load failed. Check console and retry.</div>`;
+  document.getElementById('retryBtn').style.display = 'inline-block';
+});
 
 document.getElementById('retryBtn').addEventListener('click', ()=> loadLeaderboard());
 window.addEventListener('error', (e)=>{
@@ -581,14 +1569,9 @@ window.addEventListener('error', (e)=>{
   container.innerHTML = `<div class="lb-error">An error occurred — check console for details.</div>`;
 });
 
-/* ---------- Init ---------- */
-resetGame();
-loadLeaderboard().catch(err=>{
-  console.error('loadLeaderboard initial error:', err);
-  const list = document.getElementById('leaderboardList');
-  list.innerHTML = `<div class="lb-error">Leaderboard load failed. Check console and retry.</div>`;
-  document.getElementById('retryBtn').style.display = 'inline-block';
-});
+/* expose safe helper for debugging if desired */
+window.__internal = { computeAccuracyOnPlayed, resetGame };
+
 </script>
 </body>
 </html>
