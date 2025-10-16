@@ -621,7 +621,7 @@ const ACH_DISPLAY = {
   '100_accuracy': '100% Accuracy',
   'last_place': 'Last Place!',
   'so_close': 'So Close!',
-  'confused_but_spirit': "He's a little confused, but he's got the spirit!"
+  'confused_but_spirit': "He A Little Confused, But He Got The Spirit"
 };
 const ACH_ICON = {
   '0_accuracy': '💀',
@@ -1245,7 +1245,7 @@ window.onPlaylistFinished = async function(finalAccuracy, exactMatches){
         if(finalAccuracy === 1) awards[ACH_KEYS.HUNDRED] = true;
         if(activeMode === 'main'){
           if(typeof exactMatches === 'number' && exactMatches >= (totalVideos - 2) && exactMatches < totalVideos) awards[ACH_KEYS.SO_CLOSE] = true;
-          if(finalAccuracy !== null && finalAccuracy >= 0.66 && finalAccuracy <= 0.68) awards[ACH_KEYS.SIXTY_SEVEN] = true;
+          if(finalAccuracy !== null && finalAccuracy >= 0.67 && finalAccuracy < 0.68) awards[ACH_KEYS.SIXTY_SEVEN] = true;
         }
 
         const newly = determineNewAchievements(awards);
